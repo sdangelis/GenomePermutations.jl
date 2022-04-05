@@ -1,11 +1,10 @@
 # GenomePermutations
 
-[![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://sdangelis.github.io/GenomePermutations.jl/stable)
+[![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://sdangelis.github.io/GenomePermutations.jl/dev)
 [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://sdangelis.github.io/GenomePermutations.jl/dev)
 [![Build Status](https://github.com/sdangelis/GenomePermutations.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/sdangelis/GenomePermutations.jl/actions/workflows/CI.yml?query=branch%3Amain)
 [![Coverage](https://codecov.io/gh/sdangelis/GenomePermutations.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/sdangelis/GenomePermutations.jl)[![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://sdangelis.github.io/GenomePermutations.jl/stable)
-[![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://sdangelis.github.io/GenomePermutations.jl/dev)
-[![Build Status](https://github.com/sdangelis/GenomePermutations.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/sdangelis/GenomePermutations.jl/actions/workflows/CI.yml?query=branch%3Amain)
+
 
 A package to generate random genomic regions and run permutation tests on genomic ranges in the spirit of RegioneR but implemented in Julia.  
 
