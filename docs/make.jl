@@ -1,4 +1,5 @@
 using GenomePermutations
+using GenomicFeatures
 using Documenter
 
 push!(LOAD_PATH,"../src/")
