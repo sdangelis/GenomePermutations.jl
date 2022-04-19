@@ -249,8 +249,31 @@ using Test
         @test_logs (:warn, r"is not found in the target regions")  randomisegenome(collection10, regions1) # skips wrong sequences 
         # all sequences are wrong - should return empty
         @test randomisegenome(collection9, regions5) == GenomicFeatures.IntervalCollection{Nothing}()
-        # fails cause regions won't fit anywhere
-    end 
+        
+        @testset "onfail behaviour"  begin
+            # test we successfully throw if we fail to randomise an interval
+            @test_throws ErrorException randomisegenome(collection9, regions3; onfail = :throw) == collection9
+            # test a case where we pass the original interval on fail
+            @testset ":orig" begin
+                scollection1 = GenomicFeatures.IntervalCollection([
+                    GenomicFeatures.Interval("chr1", 1, 2),
+                    GenomicFeatures.Interval("chr1",3, 4),
+                    GenomicFeatures.Interval("chr1", 200, 500),
+                    ]) 
+                sregions1 = GenomicFeatures.IntervalCollection([
+                    GenomicFeatures.Interval("chr1", 1, 4),
+                    GenomicFeatures.Interval("chr1", 300, 400),
+                    ]) 
+                # test a case where we pass the original interval on fail and allow overlaps
+                res = randomisegenome(scollection1, sregions1; onfail = :orig, allow_overlap = true)
+                @test isin(GenomicFeatures.Interval("chr1", 200, 500), res)
+                #= test a case where we pass the original interval on fail, not allowing overlaps
+                Given how narrowly we have defined this, without overlaps there is only 1 
+                possible configuration =#
+                @test_broken randomisegenome(scollection1, sregions1; onfail = :orig, allow_overlap = false) == scollection1
+            end 
+        end
+    end
     
      
     @testset "simple P structure (constructor)" begin 
