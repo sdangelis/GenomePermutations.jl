@@ -6,77 +6,15 @@ import GenomicFeatures
 import Statistics
 import HypothesisTests
 
+include("Overlaps.jl")
+include("Dist.jl")
+
 export anyoverlapping, alloverlapping, isin, countoverlapping
-export dist
-export simpleP
-export generatedistribution, randomiseregions, randomisegenome
-export SimplePTest, PermTestResult, pvalue
-export permtest, overlappermtest
-
-
-"""
-	anyoverlapping(a::GenomicFeatures.Interval{T},
-	b::GenomicFeatures.IntervalCollection{S})
-
-Extend GenomicFeatures.isoverlapping to linearly check if interval a.
-overlaps collection. Return true or false
-
-```jldoctest
-using GenomicFeatures 
-a = GenomicFeatures.Interval("chr1", 0, 10)
-b = GenomicFeatures.IntervalCollection([
-	GenomicFeatures.Interval("chr1", 5, 15),
-	GenomicFeatures.Interval("chr1", 20, 25)
-	])
-anyoverlapping(a, b) 
-
-# output
-
-true
-```
-
-See Also [`GenomePermutations.alloverlapping`](@ref), [`GenomePermutations.countoverlapping`](@ref).
-"""
-function anyoverlapping(a::GenomicFeatures.Interval{T}, b::GenomicFeatures.IntervalCollection{S}) where {T, S}
-	for interval in b
-		GenomicFeatures.isoverlapping(a, interval) && return(true::Bool)
-	end
-	return(false::Bool)
-end
-
-
-"""
-	alloverlapping(a::GenomicFeatures.IntervalCollection{T}, b::GenomicFeatures.IntervalCollection{S})
-
-Linearly check if all intervals in collection a overlap collection b. 
-Return true or false
-	
-```jldoctest
-using GenomicFeatures 
-a = GenomicFeatures.IntervalCollection([
-	GenomicFeatures.Interval("chr1", 14, 17),
-	GenomicFeatures.Interval("chr1", 20, 25)
-	])
-b = GenomicFeatures.IntervalCollection([
-	GenomicFeatures.Interval("chr1", 5, 10),
-	GenomicFeatures.Interval("chr1", 20, 25)
-	])
-alloverlapping(a, b) 
-	
-# output
-
-false
-```
-
-See Also [`GenomePermutations.anyoverlapping`](@ref), [`GenomePermutations.countoverlapping`](@ref).
-"""
-function alloverlapping(a::GenomicFeatures.IntervalCollection{T}, b::GenomicFeatures.IntervalCollection{S}) where {T,S}
-	for interval in a
-		anyoverlapping(interval, b) || return(false::Bool)
-	end
-	return(true::Bool)
-end
-
+export dist 
+export generatedistribution
+export randomiseregions, randomisegenome
+export simpleP, SimplePTest, pvalue
+export permtest, overlappermtest, PermTestResult
 
 """
 	vec_getcollection(collection::GenomicFeatures.IntervalCollection{T}, sequence::String) 
@@ -98,225 +36,16 @@ end
 
 see also [`GenomePermutations.vec_getcollection`](@ref)
 """
-function iter_getcollection(collection::GenomicFeatures.IntervalCollection{T}, 
-							sequence::String) where {T}
+function iter_getcollection(
+	collection::GenomicFeatures.IntervalCollection{T}, 
+	sequence::String
+) where {T}
 	tmp = GenomicFeatures.IntervalCollection{T}()
 	for i in collection.trees[sequence]
 		push!(tmp, i)
 	end
 	return(tmp)
 end
-
-
-"""
-	countoverlapping(a::GenomicFeatures.IntervalCollection{T} , b::GenomicFeatures.IntervalCollection{T})
-
-Linearly count how many intervals in collection a overlap with collection b.
-
-```jldoctest
-
-using GenomicFeatures 
-a = GenomicFeatures.IntervalCollection([
-	GenomicFeatures.Interval("chr1", 14, 17),
-	GenomicFeatures.Interval("chr1", 20, 50)
-	])
-b = GenomicFeatures.IntervalCollection([
-	GenomicFeatures.Interval("chr1", 5, 10),
-	GenomicFeatures.Interval("chr1", 25, 35 ),
-	GenomicFeatures.Interval("chr1", 40, 65)
-	])
-
-[countoverlapping(a, b), countoverlapping(b, a)]
-
-# output
-
-2-element Vector{Int64}:
- 1
- 2
-```
-
-#Note 
-As seen above, countoverlapping(a,b) != countoverlapping(b,a) as one interval in a 
-can overlap with >1 intervals in b.
-
-See Also [`GenomePermutations.anyoverlapping`](@ref), [`GenomePermutations.alloverlapping`](@ref).
-"""
-function countoverlapping(a::GenomicFeatures.IntervalCollection{T},
-						  b::GenomicFeatures.IntervalCollection{S}) where {T,S}
-	overlaps::Int = 0
-	for interval in a
-		anyoverlapping(interval, b) && (overlaps += 1) 
-	end
-	return(overlaps)
-end
-
-
-"""
-	isin(a::GenomicFeatures.Interval{S}, GenomicFeatures.Interval{T})
-
-Check if interval a is fully contained in interval b.
-
-```jldoctest
-using GenomicFeatures 
-a = GenomicFeatures.Interval("chr1", 5, 10)
-b = GenomicFeatures.Interval("chr1", 1, 15)
-
-isin(a, b) 
-	
-# output
-
-true
-```
-
-```jldoctest
-using GenomicFeatures 
-a = GenomicFeatures.Interval("chr1", 20, 30)
-b = GenomicFeatures.Interval("chr1", 1, 15)
-
-isin(a, b) 
-	
-# output
-
-false
-```
-
-```jldoctest
-using GenomicFeatures 
-a = GenomicFeatures.Interval("chr1", 10, 20)
-b = GenomicFeatures.Interval("chr1", 1, 15)
-
-isin(a, b) 
-	
-# output
-
-false
-```
-"""
-function isin(a::GenomicFeatures.Interval{S},b::GenomicFeatures.Interval{T}) where {S,T}
-	return (a.seqname == b.seqname && a.first >= b.first && a.last <= b.last)
-end
-
-
-"""
-	isin(a::GenomicFeatures.Interval{T}, b::GenomicFeatures.IntervalCollection{S})
-
-Linearly check if interval a is fully contained in collection b.
-"""
-function isin(a::GenomicFeatures.Interval{S},
-				 b::GenomicFeatures.IntervalCollection{T}) where {S,T}
-	
-	for interval in b
-		isin(a, interval) && return(true::Bool)
-	end
-	return(false::Bool)
-end
-
-
-"""
-	isin(a:::GenomicFeatures.IntervalCollection{T}, b:::GenomicFeatures.IntervalCollection{S})
-	
-Linearly check if all intervals in collection a are contained in collection b. 
-
-# Note
-
-At this point there are 2 layers of linear search so the time complexity is n^2.
-"""
-function isin(a::GenomicFeatures.IntervalCollection{T},
-				 b::GenomicFeatures.IntervalCollection{S}) where {T,S}
-	
-	for interval in a
-		isin(interval, b) || return(false::Bool)
-	end
-	return(true::Bool)
-end
-
-
-"""
-	dist(a, b)
-
-Return the minimum unsigend distance between Intervals a and b.
-returns missing if the two intervals do not have the same seqname. 
-"""
-function dist(a::GenomicFeatures.Interval{S},b::GenomicFeatures.Interval{T}) where {S, T}
-	
-	a.seqname != b.seqname && return missing 
-	return minimum(abs.([a.first-b.first, a.first-b.last, a.last-b.first, a.last-b.last]))
-end
-
-
-"""
-	dist(a,b, f = minimum)
-
-Linearly calculate all the distances between an interval a and a collection b,
-return a value according to function f.
-
-# Arguments
-
-- `a::GenomicFeatures.interval{T}`: interval to calculate distances from.
-- `b::GenomicFeatures.IntervalCollection{S}`: collection to calculate all distances to.
-- `f::Function`: f Summarise all the pairwise distance for a and each interval in b 
-according to the supplied function f 
-Currently tested with `minimum`, `maximum`, `mean`, and `median`.
-"""
-function dist(a::GenomicFeatures.Interval{T}, b::GenomicFeatures.IntervalCollection{S},
-			  f::Function = minimum) where {T, S}
-	
-	d = Vector{Union{Int, Float64}}(undef,0)
-	for interval in b
-		tmp_d = dist(a,interval)
-		if ismissing(tmp_d)
-			continue
-		end
-		push!(d, tmp_d)
-	end
-	# Workaround to deal with empty collection
-	isempty(d) && return(d)
-	return f(d)
-end
-
-
-"""
-	dist(a, b, f, g)
-
-Lineraly caluclates the distance between collection a and b.
-Each distance between a and b is summarised according to f and then summarised 
-according to g.
-
-# Agruments
-
-- `a::GenomicFeatures.IntervalCollection{T}`: collection a.
-- `b::GenomicFeatures.IntervalCollection{S}`: collectionb b.
-- `f::Function = x -> x`: f summarisees the result of the distances 
-between each interval of a and all intervals in b.
- tested with `minimum`. 'maximum`, `mean`, `median`
-- `g::Function = minimum`: g summarises the distances returned by f for all
-items in a. Currently tested with `minimum`. `maximum`, `mean`, and `median`.
-
-# Note
-
-Both g and f can be replaced by user-defined functions. f must take a  
-Vector{Union{Int, Float64}} and return Union{Int, Float64}.
-g must take a Vector{Union{Int, Float64}} but can return any type.
-Due to the fact that the result of f is stored in d before being summarised, it 
-is not possible to change f's return type  -
-even if we use a function in g that could acept a vector of that type. Indeed
-this is the reason for the need to Union{Int}
-"""
-function dist(a::GenomicFeatures.IntervalCollection{T}, 
-			  b::GenomicFeatures.IntervalCollection{S}, 
-			  g::Function = x -> x, 
-			  f::Function = minimum) where {S,T}
-	
-	d = Vector{Union{Int, Float64}}(undef,0)
-	for interval in a
-		tmp_d  =  dist(interval,b, f)
-		# deal with ampty collections
-		isempty(tmp_d) && continue 
-		push!(d,tmp_d)
-	end
-	return g(d)
-end
-
 
 """
 	generatedistribution(collection)
@@ -356,12 +85,18 @@ end
 
 This is the private version of randominterval, it skips sequence assertions in the name of performance
 Does it actually improve performance? Debeatable, in theory it prevents 100s of IFs. In practice,
-I haven't tested it.
+I haven't tested it. Indeed, branch prediction on asymmetrical branches should mean 
+that the ifs are not really that damaging to performance.
 """
-function _randominterval(interval::GenomicFeatures.Interval{T}, 
-						 distribution::Distributions.Sampleable, regions::GenomicFeatures.IntervalCollection{S};
-						 collection::GenomicFeatures.IntervalCollection{T} = GenomicFeatures.IntervalCollection{T}(), 
-						 allow_overlap::Bool = true, max_tries::Int = 1000, onfail = :throw) where {T,S}
+function _randominterval(
+	interval::GenomicFeatures.Interval{T}, 
+	distribution::Distributions.Sampleable, 
+	regions::GenomicFeatures.IntervalCollection{S};
+	collection::GenomicFeatures.IntervalCollection{T} = GenomicFeatures.IntervalCollection{T}(), 
+	allow_overlap::Bool = true, 
+	max_tries::Int = 1000, 
+	onfail = :throw
+) where {T,S}
 
 	il = interval.last - interval.first
 	new = GenomicFeatures.Interval{T}
@@ -378,18 +113,27 @@ function _randominterval(interval::GenomicFeatures.Interval{T},
 		end
 	end 
 	# allow passsing of the orignal interval if a random interval cannot be generated.
-	onfail == :orig && return interval
-	error("""
-		Error: can't randomise regions with $max_tries tries, 
-		Please consider increasing max_iter or use randomisation strategy 2,
-		Please also check the intervals come from the same sequnce used to generate
-		the distribution from the regions
-	""")	
+	if onfail == :orig
+		if !(allow_overlap)
+			@warn "Returning the original interval can currently cause overlapping segements - this is a known, currently untested issue!"
+		end 
+		# if we allow overlapping, we can just return the original interval
+		return interval
+	elseif onfail == :skip
+		return nothing
+	else
+		error("""
+			Error: can't randomise regions with $max_tries tries, 
+			Please consider increasing max_iter,
+			Please also check the intervals come from the same sequnce used to generate
+			the distribution from the regions
+		""")
+	end	
 end
 
 
 """
-	randominterval(interval, distribution, regions, collection; allow_overlap, max_tries)
+	randominterval(interval, distribution, regions, collection; allow_overlap, max_tries, onfail)
 
 Randomises the position of an interval according to a given distribution. 
 
@@ -400,13 +144,13 @@ Randomises the position of an interval according to a given distribution.
 Should be a discrete distribution, although right now this is not enforced at the signature
 level
 - `regions::`: the regions the new interval should be fully contained in (checked by`isin`)
-- `collecton::GenomicFeatures.IntervalCollection = `: Collection to avoid overlapping 
-to if allow_overlap is set to false, defaults to an empty collection of metadata T.
+- `collecton::GenomicFeatures.IntervalCollection =  GenomicFeatures.IntervalCollection{T}()`: Collection to avoid overlapping 
+to if allow_overlap is set to false, defaults to an empty collection of metadata .
 - `allow_overlap::Bool = true`: whether to allow overlaps to collection.
 - `max_tries::Int = 1000`: the maximum number of attempts to draw an interval that fits in
 the region from the distribution
 - `onfail::Symbol = :throw`: what to do if the interval fails to fit in the region.
-Will return the orignal nterval if :orig, otherwise throws an error.
+Will return the orignal interval if :orig, returns nothing if :skip or throw an error if :throw.
 	
 # Note 
 
@@ -416,22 +160,29 @@ paseed to the function.
 
 See Also (_randominterval)[@ref]
 """
-function randominterval(interval::GenomicFeatures.Interval{T}, 
-	distribution::Distributions.Sampleable, regions::GenomicFeatures.IntervalCollection{S};
+function randominterval(
+	interval::GenomicFeatures.Interval{T}, 
+	distribution::Distributions.Sampleable, 
+	regions::GenomicFeatures.IntervalCollection{S};
 	collection::GenomicFeatures.IntervalCollection{T} = GenomicFeatures.IntervalCollection{T}(), 
-	allow_overlap::Bool = true, max_tries::Int = 1000, onfail = :throw
-	) where {S,T}
+	allow_overlap::Bool = true, 
+	max_tries::Int = 1000, 
+	onfail = :throw
+) where {S,T}
 
 	# check interval key is in regions
-	interval.seq in keys(regions.trees) || throw(KeyError("$interval.seq not found in $regions"))	
+	interval.seqname in keys(regions.trees) || throw(KeyError("$interval.seqname not found in $regions"))	
 	# check distribution is valid, given the regions
-	if !(distribution == generatedistribution(iter_getcollection(se, interval.seq)))
-		throw(KeyError("$distribution does not match the regions for $interval.seq"))
+	if !(distribution == generatedistribution(iter_getcollection(regions, interval.seqname)))
+		throw(KeyError("$distribution does not match the regions for $interval.seqname"))
 	end 
 	
-	return _randominterval(interval, distribution, regions; 
-	collection = collection, allow_overlap = allow_overlap, max_tries = max_tries,
-	onfail = onfail
+	return _randominterval(
+		interval, distribution, regions; 
+		collection = collection, 
+		allow_overlap = allow_overlap, 
+		max_tries = max_tries,
+		onfail = onfail
 	)
 end 
 
@@ -452,26 +203,33 @@ start locations, must match collection.
 - `allow_overlap::Bool = false.
 - `max_tries::Int = 1000`: maximum number of attempts to draw an interval
 that fits in the region from the distribution.
-- `onfail::Symbol = :throw`: what to do if the interval fails to fit in the region.
-Will return the orignal nterval if :orig, otherwise throws an error.
+- `onfail::Symbol = :throw`: what to do if an interval fails to fit in the region.
+Will return the orignal interval if :orig, skip the interval if :skip, otherwise throws an error.
 
 # Notes
 
 this functions assumes that the interval collection contains intervals belonging 
 to a single sequence that is the same sequence used for the distribution. 
-The distribution should be derived from the regions, else the randomiser will (safely) fail
+The distribution should be derived from the regions.
+If the distribution and the regions don't match it will most likely fail safely
 New intervals overlapping with other intervals in the nascient collection are disallowed by default.
 To allow overlaps use `allow_overlap = true
 """
-function randomiseregions(collection::GenomicFeatures.IntervalCollection{T}, 
-						  distribution::Distributions.Sampleable, 
-						  regions::GenomicFeatures.IntervalCollection{S}; allow_overlap = false, 
-						  max_tries::Int = 1000, onfail = :throw) where {T, S}
+function randomiseregions(
+	collection::GenomicFeatures.IntervalCollection{T}, 
+	distribution::Distributions.Sampleable, 
+	regions::GenomicFeatures.IntervalCollection{S};
+	allow_overlap = false, max_tries::Int = 1000, onfail = :throw
+) where {T, S}
 
 	new_collection = GenomicFeatures.IntervalCollection{T}()
 	for i in collection
-		push!(new_collection, GenomePermutations._randominterval(i, distribution, regions;
-		collection = new_collection, allow_overlap, max_tries, onfail = onfail))
+		# we no longer handle errors here. If onfail is set to :skip, we skip 
+		# before adding nothing to the collection 
+		new_interval =  GenomePermutations._randominterval(i, distribution, regions;
+				collection = new_collection, allow_overlap, max_tries, onfail = onfail)
+		# Should be a quite asymmetrical branch so not too much performance drag
+		isnothing(new_interval) || push!(new_collection, new_interval)
 	end 
 	return new_collection
 end 
@@ -488,16 +246,18 @@ Randomises a collection, sequence by sequence along the specified regions, retur
 - `allow_overlap::Bool = false`: whether to allow overlapping intervals in the result.
 - `max_tries::Int = 1000`: maximum number of attempts to draw an interval
 that fits in the regions.
-- `onfail::Symbol = :throw`: what to do if the interval fails to fit in the regions.
-Will return the orignal nterval if :orig, otherwise throws an error.
+- `onfail::Symbol = :throw`: what to do if an interval fails to fit in the regions.
+Will return the orignal interval if :orig, skip the interval if :skip, otherwise throws an error.
 
 Note: it will skip any sequences in the collection not found in the target regions.
 If no sequences are found returns an empty collection.
 """
-function randomisegenome(col::GenomicFeatures.IntervalCollection{T}, 
-						 regions::GenomicFeatures.IntervalCollection{S}; 
-						 allow_overlap = false, max_tries::Int = 1000,
-						 onfail=:throw) where {S,T}
+function randomisegenome(
+	col::GenomicFeatures.IntervalCollection{T}, 
+	regions::GenomicFeatures.IntervalCollection{S}; 
+	allow_overlap = false, max_tries::Int = 1000,
+	onfail=:throw
+) where {S,T}
 	
 	# iterate per chromosome, generating all distributions 
 	ran = GenomicFeatures.IntervalCollection{T}()
@@ -637,11 +397,15 @@ Will need a `g` function to summarise overlaps across regions. (likely `sum`).
 - `bed_names::Union{String, Nothing}`: the names of the bed files to write to.
 - `allow_overlap::Bool = false`: whether to allow overlaps in the randomised regions.
 - `max_tries::Int`: the maximum number of tries to generate a randomised collection.
-- `onfail::Symbol = :throw`: what to do if the new random interval fails to fit in the region.
-Will return the orignal interval if :orig, otherwise throws an error.
+- `onfail::Symbol = :throw`: what to do if a random interval fails to fit in the region.
+Will return the orignal interval if :orig, skip the interval if :skip, otherwise throws an error.
 """
-function overlappermtest(col1, col2, regions, iterations; bed_names = (nothing,nothing), 
-					     allow_overlap = false, max_tries::Int = 1000, onfail = :throw)
+function overlappermtest(col1, col2, regions, iterations;
+	bed_names = (nothing,nothing),
+	allow_overlap = false, 
+	max_tries::Int = 1000, 
+	onfail = :throw
+)
 		 
 	# count base overlaps 
 	obs = countoverlapping(col1,col2)
@@ -678,7 +442,8 @@ function overlappermtest(col1, col2, regions, iterations; bed_names = (nothing,n
 	# over the number of iterations
 	ran = Array{Int}(undef, iterations)
 
-	for i in 1:iterations
+	# Because we made an array of right size, no need for bounds checks
+	Threads.@threads for i in 1:iterations
 		tmprand = Array{Int}(undef,0)
 		for seq in keys(col2.trees)
 			# check if the sequence is in collection 1 too
@@ -718,8 +483,13 @@ one of the named sequences. Lenght and order must match names.
 This is currently private as I have not tested this and I don't like the categorical distribution
 squence names situation.
 """
-function _randomgenome(regions, n::Int, C::Distributions.Categorical, 
-	L::Distributions.DiscreteDistribution, names::Vector{String}; allow_overlap = false)
+function _randomgenome(
+	regions,
+	n::Int, C::Distributions.Categorical, 
+	L::Distributions.DiscreteDistribution, 
+	names::Vector{String};
+	allow_overlap = false
+)
 
 	#generate start distrubutions - Soon to be spun off into a new function
 	S = Dict{String, Distributions.MixtureModel}()
@@ -756,8 +526,8 @@ Defaults to GenomePermutations.dist.
 - `bed_names::Union{String, Nothing}`: the names of the bed files to write to.
 - `allow_overlap::Bool = false`: whether to allow overlaps in the randomised regions.
 - `max_tries::Int = 1000`: the maximum number of tries to generate a randomised collection.
-- `onfail::Symbol = :throw`: what to do if the new random interval fails to fit in the region.
-Will return the orignal interval if :orig, otherwise (i.e `:throw`) throws an error.
+- `onfail::Symbol = :throw`: what to do if a random interval fails to fit in the region.
+Will return the orignal interval if :orig, skips it if :skip, otherwise throws an error.
 """
 function permtest(col1, col2, regions, iterations, f::Function = GenomePermutations.dist;
 	bed_names = (nothing,nothing), allow_overlap = false, max_tries::Int = 1000, onfail = :throw)
@@ -798,7 +568,7 @@ function permtest(col1, col2, regions, iterations, f::Function = GenomePermutati
 	# over the number of iterations
 	
 	ran = Array{typeof(obs)}(undef, iterations)
-	for i in 1:iterations
+	Threads.@threads for i in 1:iterations
 		
 		tmprand = Array{typeof(obs)}(undef,0)
 		for seq in keys(col2.trees)
@@ -819,8 +589,10 @@ function permtest(col1, col2, regions, iterations, f::Function = GenomePermutati
 		test = simpleP(obs, ran, iterations)
 	else
 		ran = map(Statistics.mean, ran)
-		test = HypothesisTests.UnequalVarianceZTest(obs, ran)
-	end	
+		obs = Statistics.mean(reduce(vcat, obs))
+		#obs = map(Statistics.mean, map(Statistics.mean, obs))
+		test = simpleP(obs, ran, iterations)
+	end
 		
 	return PermTestResult(iterations, obs, ran, test, bed_names[1], bed_names[2], f,
 						  "guess and check") 
