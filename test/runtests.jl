@@ -67,7 +67,7 @@ using Test
         GenomicFeatures.Interval("chr1", 1, 5),
         GenomicFeatures.Interval("chr1", 21, 25),
         GenomicFeatures.Interval("chr1", 41, 45)
-        ]) 
+    ]) 
     collection12 = GenomicFeatures.IntervalCollection([
         GenomicFeatures.Interval("chr1", 1, 5),
         GenomicFeatures.Interval("chr1", 21, 25),
@@ -75,12 +75,12 @@ using Test
         GenomicFeatures.Interval("chr2", 1, 5),
         GenomicFeatures.Interval("chr2", 21, 25),
         GenomicFeatures.Interval("chr2", 41, 45),
-        ]) 
+    ]) 
     collection13 = GenomicFeatures.IntervalCollection([
             GenomicFeatures.Interval("chr1", 101, 199),
             GenomicFeatures.Interval("chr1", 501, 600),
             GenomicFeatures.Interval("chr1", 601, 701)
-            ]) 
+    ]) 
     collection14 = GenomicFeatures.IntervalCollection([
         GenomicFeatures.Interval("chr1", 1, 100),
         GenomicFeatures.Interval("chr1", 200, 300),
@@ -88,13 +88,13 @@ using Test
         GenomicFeatures.Interval("chr2", 1, 100),
         GenomicFeatures.Interval("chr2", 200, 300),
         GenomicFeatures.Interval("chr2", 400, 500)
-        ])
+    ])
     collection15 = GenomicFeatures.IntervalCollection([
         GenomicFeatures.Interval("chr1", 50, 80),
         GenomicFeatures.Interval("chr1", 250, 280),
         GenomicFeatures.Interval("chr2", 50, 80),
         GenomicFeatures.Interval("chr2", 250, 280)
-        ]) 
+    ]) 
     collection16 = GenomicFeatures.IntervalCollection([
         GenomicFeatures.Interval("chr1", 101, 199),
         GenomicFeatures.Interval("chr1", 501, 600),
@@ -102,8 +102,11 @@ using Test
         GenomicFeatures.Interval("chr2", 101, 199),
         GenomicFeatures.Interval("chr2", 501, 600),
         GenomicFeatures.Interval("chr2", 601, 701)        
-        ]) 
-
+    ]) 
+    collection17 = GenomicFeatures.IntervalCollection([
+        GenomicFeatures.Interval("chr2", 50, 80),
+        GenomicFeatures.Interval("chr2", 250, 780)
+    ]) 
 
     regions1 = collection7 
     regions2 = GenomicFeatures.IntervalCollection([
@@ -201,7 +204,7 @@ using Test
     dist7 = generatedistribution(collection7)
     dist8 = generatedistribution(collection8)
 
-    @testset "interval randomisation" begin 
+    @testset "private interval randomisation" begin 
         @test_throws ErrorException GenomePermutations._randominterval(interval1, dist7, GenomicFeatures.IntervalCollection{nothing}(); allow_overlap = true)
         @test isin(GenomePermutations._randominterval(interval2, dist7, collection7; allow_overlap = true), collection7)
         @test isin(GenomePermutations._randominterval(interval2, dist7, collection7; allow_overlap = true), collection7) 
@@ -209,7 +212,35 @@ using Test
         @test isin(GenomePermutations._randominterval(interval5, dist6, collection8; collection = collection6, allow_overlap = true), collection8)
         @test GenomePermutations._randominterval(interval5, dist8, collection8; collection = collection6, allow_overlap = false) == interval6 # can only be 1 place
         @test_throws ErrorException GenomePermutations._randominterval(interval4, dist6, collection1; allow_overlap = false) # all stupidly mismatched. Indeed it fails gracefully
+        @testset "fail behaviour" begin 
+            # test default behaviour
+            @test_throws ErrorException  GenomePermutations._randominterval(interval3, dist2, collection2; allow_overlap = false) 
+            # test :orig
+            @test GenomePermutations._randominterval(interval3, dist2, collection2; allow_overlap = false, onfail = :orig) == interval3
+            # test :skip
+            @test isnothing(GenomePermutations._randominterval(interval3, dist2, collection2; allow_overlap = false, onfail = :skip))
+            # test :throw
+            @test_throws ErrorException   GenomePermutations._randominterval(interval3, dist2, collection2; allow_overlap = false, onfail = :throw) 
+        end 
     end 
+
+
+    @testset "public interval randomisation" begin    
+        # now we get prettier errors if sequences mismatch
+        @test_throws KeyError GenomePermutations.randominterval(interval1, dist7, GenomicFeatures.IntervalCollection{nothing}(); allow_overlap = true)
+        @test_nowarn GenomePermutations.randominterval(interval1, dist7, collection7; allow_overlap = true)
+        @test isin(GenomePermutations.randominterval(interval2, dist7, collection7; allow_overlap = true, onfail = :orig), collection7)
+        @testset "public fail behaviour" begin 
+            # test default 
+            @test_throws ErrorException  GenomePermutations.randominterval(interval3, dist2, collection2; allow_overlap = false) 
+            # test :orig
+            @test GenomePermutations.randominterval(interval3, dist2, collection2; allow_overlap = false, onfail = :orig) == interval3
+            # test skip 
+            @test isnothing(GenomePermutations.randominterval(interval3, dist2, collection2; allow_overlap = false, onfail = :skip))
+            # test :throw
+            @test_throws ErrorException   GenomePermutations.randominterval(interval3, dist2, collection2; allow_overlap = false, onfail = :throw) 
+        end
+    end
 
 
     @testset "region randomisation" begin 
@@ -225,7 +256,13 @@ using Test
         @test randomiseregions(collection2, dist2, collection2; allow_overlap = false, max_tries=100000) == collection2
         #= This mess should erorr in an undefinend way. God only knows what kind of exception
         but it should do any error and refuse to go through an infinite loop =# 
-        @test_throws ErrorException randomiseregions(collection3, dist2, collection6) 
+        @test_throws ErrorException randomiseregions(collection3, dist2, collection6)
+        @testset "check error handling" begin
+            @test_throws ErrorException randomiseregions(collection17, dist6, collection6)
+            @test_throws ErrorException randomiseregions(collection17, dist6, collection6, onfail = :throw)
+            @test_throws ErrorException randomiseregions(collection17, dist6, collection6)
+            @test randomiseregions(collection17, dist6, collection6; onfail = :skip).length == 1 
+        end
     end
 
 
@@ -267,9 +304,7 @@ using Test
                 # test a case where we pass the original interval on fail and allow overlaps
                 res = randomisegenome(scollection1, sregions1; onfail = :orig, allow_overlap = true)
                 @test isin(GenomicFeatures.Interval("chr1", 200, 500), res)
-                #= test a case where we pass the original interval on fail, not allowing overlaps
-                Given how narrowly we have defined this, without overlaps there is only 1 
-                possible configuration =#
+                # really odd corner case
                 @test_broken randomisegenome(scollection1, sregions1; onfail = :orig, allow_overlap = false) == scollection1
             end 
         end
@@ -349,7 +384,6 @@ using Test
         @test isin(GenomePermutations._randomgenome(regions2, 10, Distributions.Categorical(2), Distributions.Binomial(10),["chr1","chr2"]), regions2)
         @test_throws KeyError GenomePermutations._randomgenome(regions1, 10, Distributions.Categorical(2), Distributions.Binomial(10),["chr1","chr2","chrZ"])
         @test_throws KeyError GenomePermutations._randomgenome(regions1, 10, Distributions.Categorical(1), Distributions.Binomial(10),["chr1","chr2","chrZ"])
-        @test_skip  GenomePermutations._randomgenome(regions1, 10, Distributions.Categorical(2), Distributions.Binomial(10),["chr1","chr2","chrZ"])
     end
     
     @testset "Generic permutation test" begin 
@@ -390,16 +424,13 @@ using Test
             @testset "Single sequence" begin 
                 # 1 distance to iteslf should be as significant as it gets
                 test =  permtest(collection1, collection1, regions6, 100) 
-                @test pvalue(test.test) < 1e-99
-                @test test.test.xbar < 0
+                @test pvalue(test.test) < 0.01
                 # 2 closer than expected
                 test = permtest(collection1, scollection1, regions6, 100) 
-                @test pvalue(test.test) < 1e-99
-                @test test.test.xbar < 0
+                @test pvalue(test.test) < 0.01
                 # 3 more distant than expected
                 test = permtest(collection1, scollection3, regions6, 100)
-                @test pvalue(test.test) < 1e-99
-                @test test.test.xbar > 0 
+                @test pvalue(test.test) < 0.01
                 # 4 sequenecs to randomise do not belong to regions 
                 @test_throws ErrorException permtest(collection1,  collection2, regions8, 100)
                 # 5 Regions to randomise have an extra sequence
@@ -408,16 +439,14 @@ using Test
             @testset "Mutliple sequences" begin 
                 # 1 distance to iteslf should be as significant as it gets
                 test =  permtest(collection10, collection10, regions7, 100) 
-                @test pvalue(test.test) < 1e-99
-                @test test.test.xbar < 0 
+                @test pvalue(test.test) < 0.01
                 # 2 closer than expected
                 test = permtest(collection10, scollection2, regions7, 100) 
-                @test pvalue(test.test) < 1e-99
-                @test test.test.xbar < 0
-                # 3 more distant than expected
+                @test pvalue(test.test) < 0.01
+               # 3 more distant than expected
                 test = permtest(scollection5, scollection4, regions7, 100)
-                @test pvalue(test.test) < 1e-99
-                @test test.test.xbar > 0 
+                @test pvalue(test.test) < 0.01
+                # Need a test for the case where we expect a p of 1. 
                 # 4 All sequences wrong
                 @test_throws ErrorException permtest(collection14,  collection15, regions8, 100)
                 # 5 One of 2 sequences are wrong
