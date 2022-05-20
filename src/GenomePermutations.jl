@@ -85,7 +85,8 @@ end
 
 This is the private version of randominterval, it skips sequence assertions in the name of performance
 Does it actually improve performance? Debeatable, in theory it prevents 100s of IFs. In practice,
-I haven't tested it.
+I haven't tested it. Indeed, branch prediction on asymmetrical branches should mean 
+that the ifs are not really that damaging to performance.
 """
 function _randominterval(
 	interval::GenomicFeatures.Interval{T}, 
@@ -113,8 +114,13 @@ function _randominterval(
 	end 
 	# allow passsing of the orignal interval if a random interval cannot be generated.
 	if onfail == :orig
+		if !(allow_overlap)
+			@warn "Returning the original interval can currently cause overlapping segements - this is a known, currently untested issue!"
+		end 
 		# if we allow overlapping, we can just return the original interval
 		return interval
+	elseif onfail == :skip
+		return nothing
 	else
 		error("""
 			Error: can't randomise regions with $max_tries tries, 
@@ -127,7 +133,7 @@ end
 
 
 """
-	randominterval(interval, distribution, regions, collection; allow_overlap, max_tries)
+	randominterval(interval, distribution, regions, collection; allow_overlap, max_tries, onfail)
 
 Randomises the position of an interval according to a given distribution. 
 
@@ -138,13 +144,13 @@ Randomises the position of an interval according to a given distribution.
 Should be a discrete distribution, although right now this is not enforced at the signature
 level
 - `regions::`: the regions the new interval should be fully contained in (checked by`isin`)
-- `collecton::GenomicFeatures.IntervalCollection = `: Collection to avoid overlapping 
-to if allow_overlap is set to false, defaults to an empty collection of metadata T.
+- `collecton::GenomicFeatures.IntervalCollection =  GenomicFeatures.IntervalCollection{T}()`: Collection to avoid overlapping 
+to if allow_overlap is set to false, defaults to an empty collection of metadata .
 - `allow_overlap::Bool = true`: whether to allow overlaps to collection.
 - `max_tries::Int = 1000`: the maximum number of attempts to draw an interval that fits in
 the region from the distribution
 - `onfail::Symbol = :throw`: what to do if the interval fails to fit in the region.
-Will return the orignal nterval if :orig, otherwise throws an error.
+Will return the orignal interval if :orig, returns nothing if :skip or throw an error if :throw.
 	
 # Note 
 
@@ -165,10 +171,10 @@ function randominterval(
 ) where {S,T}
 
 	# check interval key is in regions
-	interval.seq in keys(regions.trees) || throw(KeyError("$interval.seq not found in $regions"))	
+	interval.seqname in keys(regions.trees) || throw(KeyError("$interval.seqname not found in $regions"))	
 	# check distribution is valid, given the regions
-	if !(distribution == generatedistribution(iter_getcollection(se, interval.seq)))
-		throw(KeyError("$distribution does not match the regions for $interval.seq"))
+	if !(distribution == generatedistribution(iter_getcollection(regions, interval.seqname)))
+		throw(KeyError("$distribution does not match the regions for $interval.seqname"))
 	end 
 	
 	return _randominterval(
@@ -197,14 +203,15 @@ start locations, must match collection.
 - `allow_overlap::Bool = false.
 - `max_tries::Int = 1000`: maximum number of attempts to draw an interval
 that fits in the region from the distribution.
-- `onfail::Symbol = :throw`: what to do if the interval fails to fit in the region.
-Will return the orignal nterval if :orig, otherwise throws an error.
+- `onfail::Symbol = :throw`: what to do if an interval fails to fit in the region.
+Will return the orignal interval if :orig, skip the interval if :skip, otherwise throws an error.
 
 # Notes
 
 this functions assumes that the interval collection contains intervals belonging 
 to a single sequence that is the same sequence used for the distribution. 
-The distribution should be derived from the regions, else the randomiser will (safely) fail
+The distribution should be derived from the regions.
+If the distribution and the regions don't match it will most likely fail safely
 New intervals overlapping with other intervals in the nascient collection are disallowed by default.
 To allow overlaps use `allow_overlap = true
 """
@@ -217,8 +224,12 @@ function randomiseregions(
 
 	new_collection = GenomicFeatures.IntervalCollection{T}()
 	for i in collection
-		push!(new_collection, GenomePermutations._randominterval(i, distribution, regions;
-		collection = new_collection, allow_overlap, max_tries, onfail = onfail))
+		# we no longer handle errors here. If onfail is set to :skip, we skip 
+		# before adding nothing to the collection 
+		new_interval =  GenomePermutations._randominterval(i, distribution, regions;
+				collection = new_collection, allow_overlap, max_tries, onfail = onfail)
+		# Should be a quite asymmetrical branch so not too much performance drag
+		isnothing(new_interval) || push!(new_collection, new_interval)
 	end 
 	return new_collection
 end 
@@ -235,8 +246,8 @@ Randomises a collection, sequence by sequence along the specified regions, retur
 - `allow_overlap::Bool = false`: whether to allow overlapping intervals in the result.
 - `max_tries::Int = 1000`: maximum number of attempts to draw an interval
 that fits in the regions.
-- `onfail::Symbol = :throw`: what to do if the interval fails to fit in the regions.
-Will return the orignal nterval if :orig, otherwise throws an error.
+- `onfail::Symbol = :throw`: what to do if an interval fails to fit in the regions.
+Will return the orignal interval if :orig, skip the interval if :skip, otherwise throws an error.
 
 Note: it will skip any sequences in the collection not found in the target regions.
 If no sequences are found returns an empty collection.
@@ -386,8 +397,8 @@ Will need a `g` function to summarise overlaps across regions. (likely `sum`).
 - `bed_names::Union{String, Nothing}`: the names of the bed files to write to.
 - `allow_overlap::Bool = false`: whether to allow overlaps in the randomised regions.
 - `max_tries::Int`: the maximum number of tries to generate a randomised collection.
-- `onfail::Symbol = :throw`: what to do if the new random interval fails to fit in the region.
-Will return the orignal interval if :orig, otherwise throws an error.
+- `onfail::Symbol = :throw`: what to do if a random interval fails to fit in the region.
+Will return the orignal interval if :orig, skip the interval if :skip, otherwise throws an error.
 """
 function overlappermtest(col1, col2, regions, iterations;
 	bed_names = (nothing,nothing),
@@ -431,6 +442,7 @@ function overlappermtest(col1, col2, regions, iterations;
 	# over the number of iterations
 	ran = Array{Int}(undef, iterations)
 
+	# Because we made an array of right size, no need for bounds checks
 	Threads.@threads for i in 1:iterations
 		tmprand = Array{Int}(undef,0)
 		for seq in keys(col2.trees)
@@ -514,8 +526,8 @@ Defaults to GenomePermutations.dist.
 - `bed_names::Union{String, Nothing}`: the names of the bed files to write to.
 - `allow_overlap::Bool = false`: whether to allow overlaps in the randomised regions.
 - `max_tries::Int = 1000`: the maximum number of tries to generate a randomised collection.
-- `onfail::Symbol = :throw`: what to do if the new random interval fails to fit in the region.
-Will return the orignal interval if :orig, otherwise (i.e `:throw`) throws an error.
+- `onfail::Symbol = :throw`: what to do if a random interval fails to fit in the region.
+Will return the orignal interval if :orig, skips it if :skip, otherwise throws an error.
 """
 function permtest(col1, col2, regions, iterations, f::Function = GenomePermutations.dist;
 	bed_names = (nothing,nothing), allow_overlap = false, max_tries::Int = 1000, onfail = :throw)
@@ -556,7 +568,7 @@ function permtest(col1, col2, regions, iterations, f::Function = GenomePermutati
 	# over the number of iterations
 	
 	ran = Array{typeof(obs)}(undef, iterations)
-	for i in 1:iterations
+	Threads.@threads for i in 1:iterations
 		
 		tmprand = Array{typeof(obs)}(undef,0)
 		for seq in keys(col2.trees)
@@ -577,8 +589,10 @@ function permtest(col1, col2, regions, iterations, f::Function = GenomePermutati
 		test = simpleP(obs, ran, iterations)
 	else
 		ran = map(Statistics.mean, ran)
-		test = HypothesisTests.UnequalVarianceZTest(obs, ran)
-	end	
+		obs = Statistics.mean(reduce(vcat, obs))
+		#obs = map(Statistics.mean, map(Statistics.mean, obs))
+		test = simpleP(obs, ran, iterations)
+	end
 		
 	return PermTestResult(iterations, obs, ran, test, bed_names[1], bed_names[2], f,
 						  "guess and check") 
