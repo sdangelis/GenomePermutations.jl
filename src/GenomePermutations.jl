@@ -16,6 +16,7 @@ export randomiseregions, randomisegenome
 export simpleP, SimplePTest, pvalue
 export permtest, overlappermtest, PermTestResult
 
+
 """
 	vec_getcollection(collection::GenomicFeatures.IntervalCollection{T}, sequence::String) 
 
@@ -115,7 +116,8 @@ function _randominterval(
 	# allow passsing of the orignal interval if a random interval cannot be generated.
 	if onfail == :orig
 		if !(allow_overlap)
-			@warn "Returning the original interval can currently cause overlapping segements - this is a known, currently untested issue!"
+			anyoverlapping(interval, collection) && @warn "Returning the original interval can currently cause overlapping segements"
+			return interval
 		end 
 		# if we allow overlapping, we can just return the original interval
 		return interval
@@ -176,7 +178,7 @@ function randominterval(
 	if !(distribution == generatedistribution(iter_getcollection(regions, interval.seqname)))
 		throw(KeyError("$distribution does not match the regions for $interval.seqname"))
 	end 
-	
+
 	return _randominterval(
 		interval, distribution, regions; 
 		collection = collection, 
@@ -184,8 +186,8 @@ function randominterval(
 		max_tries = max_tries,
 		onfail = onfail
 	)
+	
 end 
-
 
 """
 	randomiseregions(collection, distribution, regions; allow_overlap, max_tries, onfail)
