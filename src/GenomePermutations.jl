@@ -9,7 +9,7 @@ import HypothesisTests
 include("Overlaps.jl")
 include("Dist.jl")
 
-export anyoverlapping, alloverlapping, isin, countoverlapping
+export anyoverlapping, alloverlapping, isin, anyin, countoverlapping
 export dist 
 export generatedistribution
 export randomiseregions, randomisegenome

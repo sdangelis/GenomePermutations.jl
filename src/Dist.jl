@@ -4,6 +4,21 @@ dist(a, b)
 
 Return the minimum unsigend distance between Intervals a and b.
 returns missing if the two intervals do not have the same seqname. 
+
+```jldoctest
+
+using GenomicFeatures 
+a = GenomicFeatures.Interval("chr1", 10, 20)
+b = GenomicFeatures.Interval("chr1", 30, 65)
+    
+[dist(a, b), dist(b, a)]
+
+# output
+
+2-element Vector{Int64}:
+ 10
+ 10
+```
 """
 function dist(a::GenomicFeatures.Interval{S},b::GenomicFeatures.Interval{T}) where {S, T}
 
@@ -16,7 +31,7 @@ end
 dist(a,b, f = minimum)
 
 Linearly calculate all the distances between an interval a and a collection b,
-return a value according to function f.
+returning a value summarised according to function f.
 
 # Arguments
 
@@ -25,6 +40,30 @@ return a value according to function f.
 - `f::Function`: f Summarise all the pairwise distance for a and each interval in b 
 according to the supplied function f 
 Currently tested with `minimum`, `maximum`, `mean`, and `median`.
+
+```jldoctest
+using GenomicFeatures
+using Statistics
+
+a = GenomicFeatures.IntervalCollection([
+	GenomicFeatures.Interval("chr1", 15, 20),
+	GenomicFeatures.Interval("chr1", 150, 200)
+	])
+b = GenomicFeatures.IntervalCollection([
+	GenomicFeatures.Interval("chr1", 5, 10),
+	GenomicFeatures.Interval("chr1", 25, 35 ),
+	GenomicFeatures.Interval("chr1", 40, 100)
+	])
+
+[dist(a,b, minimum), dist(a,b, maximum), dist(a,b, mean), dist(a,b, median)]
+# output
+
+4-element Vector{Float64}:
+ 5.0
+ 50.0
+ 27.5
+ 27.5
+```
 """
 function dist(
     a::GenomicFeatures.Interval{T}, 

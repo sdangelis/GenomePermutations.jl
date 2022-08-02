@@ -148,6 +148,8 @@ isin(a, b)
 
 false
 ```
+
+See Also [`GenomePermutations.isin`](@ref), [`GenomePermutations.anyin`](@ref).
 """
 function isin(a::GenomicFeatures.Interval{S},b::GenomicFeatures.Interval{T}) where {S,T}
 	return (a.seqname == b.seqname && a.first >= b.first && a.last <= b.last)
@@ -157,7 +159,46 @@ end
 """
 	isin(a::GenomicFeatures.Interval{T}, b::GenomicFeatures.IntervalCollection{S})
 
-Linearly check if interval a is fully contained in collection b.
+Linearly check if interval a is fully contained in any interval of collection b.
+	
+```jldoctest
+using GenomicFeatures 
+a = GenomicFeatures.Interval("chr1", 5, 10)
+b = GenomicFeatures.IntervalCollection([
+	GenomicFeatures.Interval("chr1", 5, 10),
+	GenomicFeatures.Interval("chr1", 25, 35 ),
+	GenomicFeatures.Interval("chr1", 40, 65)
+	])
+
+isin(a, b) 
+		
+# output
+
+true
+```
+
+```jldoctest
+using GenomicFeatures 
+a = GenomicFeatures.Interval("chr1", 30, 50)
+b = GenomicFeatures.IntervalCollection([
+	GenomicFeatures.Interval("chr1", 5, 10),
+	GenomicFeatures.Interval("chr1", 25, 35),
+	GenomicFeatures.Interval("chr1", 35, 65)
+	])
+
+isin(a, b) 
+		
+# output
+
+false
+```
+
+#Note 
+
+`isin(a, b)` strictly checks if a is contained in any single interval of b, 
+rather than whether a is contained within any combination of intervals in collection b
+
+See Also [`GenomePermutations.isin`](@ref), [`GenomePermutations.anyin`](@ref).
 """
 function isin(a::GenomicFeatures.Interval{S},
 				 b::GenomicFeatures.IntervalCollection{T}) where {S,T}
@@ -172,11 +213,35 @@ end
 """
 	isin(a:::GenomicFeatures.IntervalCollection{T}, b:::GenomicFeatures.IntervalCollection{S})
 	
-Linearly check if all intervals in collection a are contained in collection b. 
+Linearly check if *all* intervals in collection a are contained in collection b. 
 
+```jldoctest
+
+	using GenomicFeatures 
+	a = GenomicFeatures.IntervalCollection([
+		GenomicFeatures.Interval("chr1", 6, 9),
+		GenomicFeatures.Interval("chr1", 45, 50)
+		])
+	b = GenomicFeatures.IntervalCollection([
+		GenomicFeatures.Interval("chr1", 5, 10),
+		GenomicFeatures.Interval("chr1", 25, 35 ),
+		GenomicFeatures.Interval("chr1", 40, 65)
+		])
+	
+	[isin(a, b), isin(b, a)]
+	
+	# output
+	
+	2-element Vector{Bool}:
+	 true
+	 false
+	```
+	
 # Note
 
 At this point there are 2 layers of linear search so the time complexity is n^2.
+
+See Also [`GenomePermutations.isin`](@ref), [`GenomePermutations.anyin`](@ref).
 """
 function isin(a::GenomicFeatures.IntervalCollection{T},
 				 b::GenomicFeatures.IntervalCollection{S}) where {T,S}
@@ -185,4 +250,44 @@ function isin(a::GenomicFeatures.IntervalCollection{T},
 		isin(interval, b) || return(false::Bool)
 	end
 	return(true::Bool)
+end
+
+"""
+	anyin(a:::GenomicFeatures.IntervalCollection{T}, b:::GenomicFeatures.IntervalCollection{S})
+	
+Linearly check if *any* interval in collection a are contained in collection b. 
+
+```jldoctest
+
+using GenomicFeatures 
+a = GenomicFeatures.IntervalCollection([
+	GenomicFeatures.Interval("chr1", 25, 27),
+	GenomicFeatures.Interval("chr1", 100, 150)
+	])
+b = GenomicFeatures.IntervalCollection([
+	GenomicFeatures.Interval("chr1", 5, 10),
+	GenomicFeatures.Interval("chr1", 25, 35 ),
+	GenomicFeatures.Interval("chr1", 40, 65)
+	])
+	
+anyin(a, b)
+	
+# output
+
+true
+```
+
+# Note
+
+At this point there are 2 layers of linear search so the time complexity is n^2
+
+See Also [`GenomePermutations.isin`](@ref), [`GenomePermutations.anyin`](@ref).
+"""
+function anyin(a::GenomicFeatures.IntervalCollection{T},
+				 b::GenomicFeatures.IntervalCollection{S}) where {T,S}
+	
+	for interval in a
+		isin(interval, b) && return(true::Bool)
+	end
+	return(false::Bool)
 end
