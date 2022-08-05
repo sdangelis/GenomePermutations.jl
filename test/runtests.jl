@@ -198,6 +198,7 @@ using Test
     end 
 
 
+
     dist2 = generatedistribution(collection2)
     dist3 = generatedistribution(collection3)
     dist6 = generatedistribution(collection6)
@@ -466,5 +467,16 @@ using Test
             @test_nowarn permtest(lc1,  lc2, lr1, 1000)
         end
     end
+
+end
+
+@testset "[TMP] Refactoring test" begin 
+    collection1 = GenomicFeatures.IntervalCollection([
+        GenomicFeatures.Interval("chr1", 1, 100),
+        GenomicFeatures.Interval("chr1", 200, 300),
+        GenomicFeatures.Interval("chr1", 400, 500)
+        ]) # test1
+    instance = GenomePermutations.StartMixture("hgTest", collection1, false)
+    @test instance.distribution["chr1"] == generatedistribution(collection1)
 
 end

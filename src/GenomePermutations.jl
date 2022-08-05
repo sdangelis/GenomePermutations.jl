@@ -71,6 +71,7 @@ Generating a distribution from an overlapping collection is undocumented
 """
 function generatedistribution(collection) 
 
+	#@deprecate	"This function is deprecated constructors instead"
 	d = Vector{Distributions.DiscreteUniform}(undef, 0)
 	l = Vector{Int}(undef,0)
 	for i in collection
