@@ -8,6 +8,7 @@ import HypothesisTests
 
 include("Overlaps.jl")
 include("Dist.jl")
+include("Rand.jl")
 
 export anyoverlapping, alloverlapping, isin, anyin, countoverlapping
 export dist 
@@ -20,7 +21,9 @@ export permtest, overlappermtest, PermTestResult
 """
 	vec_getcollection(collection::GenomicFeatures.IntervalCollection{T}, sequence::String) 
 
-(inefficiently) retun a interval collection with only features in the specified sequence 
+(inefficiently) retun a interval collection with only features in the specified sequence.
+There should be a better way to do this.
+
 
 See Also [`GenomePermutations.iter_getcollection`](@ref)
 """
@@ -34,6 +37,7 @@ end
 	iter_getcollection(collection::GenomicFeatures.IntervalCollection{T}, sequence::String) 
 
 (inefficiently) retun a interval collection with only features in the specified sequence.
+There should be a better way to do this.
 
 see also [`GenomePermutations.vec_getcollection`](@ref)
 """
