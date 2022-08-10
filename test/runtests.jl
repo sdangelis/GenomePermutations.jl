@@ -477,6 +477,6 @@ end
         GenomicFeatures.Interval("chr1", 400, 500)
         ]) # test1
     instance = GenomePermutations.StartMixture("hgTest", collection1, false)
-    @test instance.distribution["chr1"] == generatedistribution(collection1)
+    @test instance._distribution["chr1"] == generatedistribution(collection1)
 
 end
