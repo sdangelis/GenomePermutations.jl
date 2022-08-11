@@ -6,150 +6,216 @@ using HypothesisTests
 using Statistics
 using Test
 
-@testset "GenomicPermutations.jl" begin
-    
-    # set up intervals to test
-    interval1 = GenomicFeatures.Interval("chr1", 1150, 1180)  # test2
-    interval2 = GenomicFeatures.Interval("chr1", 250,280) # test3
-    interval3 = GenomicFeatures.Interval("chr1", 99,280) # test7
-    interval4 = GenomicFeatures.Interval("chr3", 99,280) # test7
-    interval5 = GenomicFeatures.Interval("chr2", 2150, 2180)
-    interval6 = GenomicFeatures.Interval("chr2", 2350, 2380)
-    collection1 = GenomicFeatures.IntervalCollection([
-        GenomicFeatures.Interval("chr1", 1, 100),
-        GenomicFeatures.Interval("chr1", 200, 300),
-        GenomicFeatures.Interval("chr1", 400, 500)
-        ]) # test1
-    collection2 = GenomicFeatures.IntervalCollection([
-        GenomicFeatures.Interval("chr1", 50, 80),
-        GenomicFeatures.Interval("chr1", 250, 280)
-        ]) # test4
-    collection3 = GenomicFeatures.IntervalCollection([
-        GenomicFeatures.Interval("chr1", 50, 80),
+# set up intervals to test
+
+interval1 = GenomicFeatures.Interval("chr1", 1150, 1180)  # test2
+interval2 = GenomicFeatures.Interval("chr1", 250,280) # test3
+interval3 = GenomicFeatures.Interval("chr1", 99,280) # test7
+interval4 = GenomicFeatures.Interval("chr3", 99,280) # test7
+interval5 = GenomicFeatures.Interval("chr2", 2150, 2180)
+interval6 = GenomicFeatures.Interval("chr2", 2350, 2380)
+collection1 = GenomicFeatures.IntervalCollection([
+    GenomicFeatures.Interval("chr1", 1, 100),
+    GenomicFeatures.Interval("chr1", 200, 300),
+    GenomicFeatures.Interval("chr1", 400, 500)
+    ]) # test1
+collection2 = GenomicFeatures.IntervalCollection([
+    GenomicFeatures.Interval("chr1", 50, 80),
+    GenomicFeatures.Interval("chr1", 250, 280)
+    ]) # test4
+collection3 = GenomicFeatures.IntervalCollection([
+    GenomicFeatures.Interval("chr1", 50, 80),
         GenomicFeatures.Interval("chr1", 2250, 2280)
         ]) # test5 
-    collection4 = GenomicFeatures.IntervalCollection([
-        GenomicFeatures.Interval("chr1", 2150, 2180),
-        GenomicFeatures.Interval("chr1", 2250, 2280)
-        ]) # test6 
-    collection5 = GenomicFeatures.IntervalCollection([
-        GenomicFeatures.Interval("chr1", 2150, 2180),
-        GenomicFeatures.Interval("chr1", 2250, 2280),
-        GenomicFeatures.Interval("chr2", 2250, 2280)
-        ])
-    collection6 = GenomicFeatures.IntervalCollection([
-        GenomicFeatures.Interval("chr2", 2150, 2180),
-        GenomicFeatures.Interval("chr2", 2250, 2280)
+collection4 = GenomicFeatures.IntervalCollection([
+    GenomicFeatures.Interval("chr1", 2150, 2180),
+    GenomicFeatures.Interval("chr1", 2250, 2280)
+     ]) # test6 
+collection5 = GenomicFeatures.IntervalCollection([
+    GenomicFeatures.Interval("chr1", 2150, 2180),
+    GenomicFeatures.Interval("chr1", 2250, 2280),
+    GenomicFeatures.Interval("chr2", 2250, 2280)
     ])
-    collection7 = GenomicFeatures.IntervalCollection([
-        GenomicFeatures.Interval("chr1", 0, 1000),
-        GenomicFeatures.Interval("chr1", 2000, 3000)
+collection6 = GenomicFeatures.IntervalCollection([
+    GenomicFeatures.Interval("chr2", 2150, 2180),
+    GenomicFeatures.Interval("chr2", 2250, 2280)
     ])
-    collection8 = GenomicFeatures.IntervalCollection([
-        GenomicFeatures.Interval("chr2", 2150, 2180),
-        GenomicFeatures.Interval("chr2", 2250, 2280),
-        interval6
+collection7 = GenomicFeatures.IntervalCollection([
+    GenomicFeatures.Interval("chr1", 0, 1000),
+    GenomicFeatures.Interval("chr1", 2000, 3000)
     ])
-    collection9 = GenomicFeatures.IntervalCollection([
-        GenomicFeatures.Interval("chr1", 1, 100),
-        GenomicFeatures.Interval("chr1", 200, 300),
-        GenomicFeatures.Interval("chr1", 2400, 2500),
+collection8 = GenomicFeatures.IntervalCollection([
+    GenomicFeatures.Interval("chr2", 2150, 2180),
+    GenomicFeatures.Interval("chr2", 2250, 2280),
+    interval6
     ])
-    collection10 = GenomicFeatures.IntervalCollection([
-        GenomicFeatures.Interval("chr1", 1, 100),
-        GenomicFeatures.Interval("chr1", 200, 300),
-        GenomicFeatures.Interval("chr1", 2400, 2500),
-        GenomicFeatures.Interval("chr2", 1, 100),
-        GenomicFeatures.Interval("chr2", 200, 300),
-        GenomicFeatures.Interval("chr2", 2400, 2500)
+collection9 = GenomicFeatures.IntervalCollection([
+    GenomicFeatures.Interval("chr1", 1, 100),
+    GenomicFeatures.Interval("chr1", 200, 300),
+    GenomicFeatures.Interval("chr1", 2400, 2500),
     ])
-    collection11 = GenomicFeatures.IntervalCollection([
-        GenomicFeatures.Interval("chr1", 1, 5),
-        GenomicFeatures.Interval("chr1", 21, 25),
-        GenomicFeatures.Interval("chr1", 41, 45)
+collection10 = GenomicFeatures.IntervalCollection([
+    GenomicFeatures.Interval("chr1", 1, 100),
+    GenomicFeatures.Interval("chr1", 200, 300),
+    GenomicFeatures.Interval("chr1", 2400, 2500),
+    GenomicFeatures.Interval("chr2", 1, 100),
+    GenomicFeatures.Interval("chr2", 200, 300),
+    GenomicFeatures.Interval("chr2", 2400, 2500)
+    ])
+collection11 = GenomicFeatures.IntervalCollection([
+    GenomicFeatures.Interval("chr1", 1, 5),
+    GenomicFeatures.Interval("chr1", 21, 25),
+    GenomicFeatures.Interval("chr1", 41, 45)
     ]) 
-    collection12 = GenomicFeatures.IntervalCollection([
-        GenomicFeatures.Interval("chr1", 1, 5),
-        GenomicFeatures.Interval("chr1", 21, 25),
-        GenomicFeatures.Interval("chr1", 41, 45),
-        GenomicFeatures.Interval("chr2", 1, 5),
-        GenomicFeatures.Interval("chr2", 21, 25),
-        GenomicFeatures.Interval("chr2", 41, 45),
+collection12 = GenomicFeatures.IntervalCollection([
+    GenomicFeatures.Interval("chr1", 1, 5),
+    GenomicFeatures.Interval("chr1", 21, 25),
+    GenomicFeatures.Interval("chr1", 41, 45),
+    GenomicFeatures.Interval("chr2", 1, 5),
+    GenomicFeatures.Interval("chr2", 21, 25),
+    GenomicFeatures.Interval("chr2", 41, 45),
     ]) 
-    collection13 = GenomicFeatures.IntervalCollection([
-            GenomicFeatures.Interval("chr1", 101, 199),
-            GenomicFeatures.Interval("chr1", 501, 600),
-            GenomicFeatures.Interval("chr1", 601, 701)
+collection13 = GenomicFeatures.IntervalCollection([
+    GenomicFeatures.Interval("chr1", 101, 199),
+    GenomicFeatures.Interval("chr1", 501, 600),
+    GenomicFeatures.Interval("chr1", 601, 701)  
     ]) 
-    collection14 = GenomicFeatures.IntervalCollection([
-        GenomicFeatures.Interval("chr1", 1, 100),
-        GenomicFeatures.Interval("chr1", 200, 300),
-        GenomicFeatures.Interval("chr1", 400, 500),
-        GenomicFeatures.Interval("chr2", 1, 100),
-        GenomicFeatures.Interval("chr2", 200, 300),
-        GenomicFeatures.Interval("chr2", 400, 500)
+collection14 = GenomicFeatures.IntervalCollection([
+    GenomicFeatures.Interval("chr1", 1, 100),
+    GenomicFeatures.Interval("chr1", 200, 300),
+    GenomicFeatures.Interval("chr1", 400, 500),
+    GenomicFeatures.Interval("chr2", 1, 100),
+    GenomicFeatures.Interval("chr2", 200, 300),
+    GenomicFeatures.Interval("chr2", 400, 500)
     ])
-    collection15 = GenomicFeatures.IntervalCollection([
-        GenomicFeatures.Interval("chr1", 50, 80),
-        GenomicFeatures.Interval("chr1", 250, 280),
-        GenomicFeatures.Interval("chr2", 50, 80),
-        GenomicFeatures.Interval("chr2", 250, 280)
+collection15 = GenomicFeatures.IntervalCollection([
+    GenomicFeatures.Interval("chr1", 50, 80),
+    GenomicFeatures.Interval("chr1", 250, 280),
+    GenomicFeatures.Interval("chr2", 50, 80),
+    GenomicFeatures.Interval("chr2", 250, 280)
     ]) 
-    collection16 = GenomicFeatures.IntervalCollection([
-        GenomicFeatures.Interval("chr1", 101, 199),
-        GenomicFeatures.Interval("chr1", 501, 600),
-        GenomicFeatures.Interval("chr1", 601, 701),
-        GenomicFeatures.Interval("chr2", 101, 199),
-        GenomicFeatures.Interval("chr2", 501, 600),
-        GenomicFeatures.Interval("chr2", 601, 701)        
+collection16 = GenomicFeatures.IntervalCollection([
+    GenomicFeatures.Interval("chr1", 101, 199),
+    GenomicFeatures.Interval("chr1", 501, 600),
+    GenomicFeatures.Interval("chr1", 601, 701),
+    GenomicFeatures.Interval("chr2", 101, 199),
+    GenomicFeatures.Interval("chr2", 501, 600),
+    GenomicFeatures.Interval("chr2", 601, 701)        
     ]) 
-    collection17 = GenomicFeatures.IntervalCollection([
-        GenomicFeatures.Interval("chr2", 50, 80),
-        GenomicFeatures.Interval("chr2", 250, 780)
+collection17 = GenomicFeatures.IntervalCollection([
+    GenomicFeatures.Interval("chr2", 50, 80),
+    GenomicFeatures.Interval("chr2", 250, 780)
     ]) 
 
-    regions1 = collection7 
-    regions2 = GenomicFeatures.IntervalCollection([
-        GenomicFeatures.Interval("chr1", 0, 1000),
-        GenomicFeatures.Interval("chr1", 2000, 3000),
-        GenomicFeatures.Interval("chr2", 0, 1000),
-        GenomicFeatures.Interval("chr2", 2000, 3000)
+regions1 = collection7 
+regions2 = GenomicFeatures.IntervalCollection([
+    GenomicFeatures.Interval("chr1", 0, 1000),
+    GenomicFeatures.Interval("chr1", 2000, 3000),
+    GenomicFeatures.Interval("chr2", 0, 1000),
+    GenomicFeatures.Interval("chr2", 2000, 3000)
     ])
     regions3 = GenomicFeatures.IntervalCollection([
-        GenomicFeatures.Interval("chr1",500,650),
-        GenomicFeatures.Interval("chr1", 1000, 1101)
+    GenomicFeatures.Interval("chr1",500,650),
+    GenomicFeatures.Interval("chr1", 1000, 1101)
     ])
     regions4 = GenomicFeatures.IntervalCollection([
-        GenomicFeatures.Interval("chr1",500,650),
-        GenomicFeatures.Interval("chr1", 1000, 1101),
-        GenomicFeatures.Interval("chr2",500,650),
-        GenomicFeatures.Interval("chr2", 1000, 1101)
+    GenomicFeatures.Interval("chr1",500,650),
+    GenomicFeatures.Interval("chr1", 1000, 1101),
+    GenomicFeatures.Interval("chr2",500,650),
+    GenomicFeatures.Interval("chr2", 1000, 1101)
     ])
-    regions5 = GenomicFeatures.IntervalCollection([
-        GenomicFeatures.Interval("chrM", 0, 1000),
-        GenomicFeatures.Interval("chrM", 2000, 3000),
+regions5 = GenomicFeatures.IntervalCollection([
+    GenomicFeatures.Interval("chrM", 0, 1000),
+    GenomicFeatures.Interval("chrM", 2000, 3000),
     ])
-    regions6 = IntervalCollection([GenomicFeatures.Interval("chr1", 1, 500000)])
-    regions7 = IntervalCollection([
-        GenomicFeatures.Interval("chr1", 1, 500000),
-        GenomicFeatures.Interval("chr2", 1, 500000)
-        ])
-    regions8 = IntervalCollection([GenomicFeatures.Interval("chrM", 1, 500000)])  
-    regions9 = IntervalCollection([GenomicFeatures.Interval("chr1", 1, 701)])
-    regions10 = IntervalCollection([
-        GenomicFeatures.Interval("chr1", 1, 701),
-        GenomicFeatures.Interval("chr2", 1, 701)
+regions6 = IntervalCollection([GenomicFeatures.Interval("chr1", 1, 500000)])
+regions7 = IntervalCollection([
+    GenomicFeatures.Interval("chr1", 1, 500000),
+    GenomicFeatures.Interval("chr2", 1, 500000)
     ])
-    regions11 = IntervalCollection([
-        GenomicFeatures.Interval("chr1", 1, 701),
-        GenomicFeatures.Interval("chrM", 1, 701)
+regions8 = IntervalCollection([GenomicFeatures.Interval("chrM", 1, 500000)])  
+regions9 = IntervalCollection([GenomicFeatures.Interval("chr1", 1, 701)])
+regions10 = IntervalCollection([
+    GenomicFeatures.Interval("chr1", 1, 701),
+    GenomicFeatures.Interval("chr2", 1, 701)
     ])
-    regions12 =  IntervalCollection([
-        GenomicFeatures.Interval("chr1", 1, 500000),
-        GenomicFeatures.Interval("chr2", 1, 500000),
-        GenomicFeatures.Interval("chrM", 1, 500000)
-        ])
+regions11 = IntervalCollection([
+    GenomicFeatures.Interval("chr1", 1, 701),
+    GenomicFeatures.Interval("chrM", 1, 701)
+    ])
+regions12 =  IntervalCollection([
+    GenomicFeatures.Interval("chr1", 1, 500000),
+    GenomicFeatures.Interval("chr2", 1, 500000),
+    GenomicFeatures.Interval("chrM", 1, 500000)
+    ])
 
+
+
+@testset "GenomicPermutations.jl" begin
+    
+    @testset "exporting what is supposed to export" begin 
+    end 
+
+    @testset "test AbstractGenomeRand" begin
+        
+        @testset "StartMixture" begin
+            
+            @test_nowarn  GenomePermutations.StartMixture("hgTest", collection1, false) 
+            @test_nowarn  GenomePermutations.StartMixture("hgTest", collection1, true) 
+            
+            t1 = GenomePermutations.StartMixture("hgTest", collection1, true) 
+            t7 = GenomePermutations.StartMixture("hgTest", collection7, true)
+            t17 = GenomePermutations.StartMixture("hgTest", collection17, false) 
+            t17_by_chr = GenomePermutations.StartMixture("hgTest", collection17, true; by_chromosome = true) #
+            t6 = GenomePermutations.StartMixture("hgTest", collection6, true)
+            f6 = GenomePermutations.StartMixture("hgTest", collection6, false)
+            f8 = GenomePermutations.StartMixture("hgTest", collection8, false)
+            f8_by_chr = GenomePermutations.StartMixture("hgTest", collection8, false; by_chromosome = true)
+            f1 = GenomePermutations.StartMixture("hgTest", collection1, false) 
+            @test t1._distribution["chr1"] == MixtureModel([DiscreteUniform(1,100), DiscreteUniform(200, 300), DiscreteUniform(400, 500)], Distributions.Categorical([99/299, 100/299, 100/299]))
+            
+            @testset "draw random samples" begin
+                @test_nowarn rand(f1)
+                @test_nowarn rand(t1)
+                @test isin(rand(f1), collection1)
+                @test isin(rand(t1), collection1)
+            end    
+            
+            @testset "randomiser" begin
+                @test_nowarn  GenomePermutations.randomise(interval1, t17) 
+                @test_throws KeyError GenomePermutations.randomise(interval1, t17_by_chr)
+                @test isin(GenomePermutations.randomise(interval1, t7), collection7)
+                # no way to randomise this interval without overlapping collection 6 
+                @test_throws ErrorException GenomePermutations.randomise(interval5, f6; collection = collection6)
+                @test isin(GenomePermutations.randomise(interval5, t6; collection = collection6), collection6)
+                # this one can only be in 1 place 
+                @test GenomePermutations.randomise(interval5, f8; collection = collection6, max_tries = 100000) == interval6
+                # are chromosome by chromosome the same when they must be?
+                GenomePermutations.randomise(interval5, f8; collection = collection6, max_tries = 100000) == \
+                GenomePermutations.randomise(interval5, f8_by_chr; collection = collection6, max_tries = 100000)
+            end 
+
+            @testset "Abstract Methods" begin
+                @testset "rand" begin
+                end
+                @testset "randomise" begin 
+                end
+            end
+        
+        end
+    end
+    
+    @testset "[TMP] Refactoring test" begin 
+        collection1 = GenomicFeatures.IntervalCollection([
+            GenomicFeatures.Interval("chr1", 1, 100),
+            GenomicFeatures.Interval("chr1", 200, 300),
+            GenomicFeatures.Interval("chr1", 400, 500)
+            ]) # test1
+        instance = GenomePermutations.StartMixture("hgTest", collection1, false)
+        @test instance._distribution["chr1"] == generatedistribution(collection1)
+    
+    end
+    
     # no need to test isoverlapping(::GenomicFeatures.Interval, ::GenomicFeatures.Interval)
     @testset "overlaps and isin functions" begin
         @test ([false, true, true, false] == map(x->anyoverlapping(x,collection1), [interval1, interval2, interval3, interval4]))
@@ -470,13 +536,3 @@ using Test
 
 end
 
-@testset "[TMP] Refactoring test" begin 
-    collection1 = GenomicFeatures.IntervalCollection([
-        GenomicFeatures.Interval("chr1", 1, 100),
-        GenomicFeatures.Interval("chr1", 200, 300),
-        GenomicFeatures.Interval("chr1", 400, 500)
-        ]) # test1
-    instance = GenomePermutations.StartMixture("hgTest", collection1, false)
-    @test instance._distribution["chr1"] == generatedistribution(collection1)
-
-end

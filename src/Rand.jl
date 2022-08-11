@@ -92,25 +92,25 @@ mutable struct StartMixture <: AbstractGenomeDist
 	    distribution = Dict{String, Distributions.MixtureModel}()
         len_distribution = Dict{String, Distributions.Binomial}()
         lengths = Dict{String, Int}()
-        seqs = Vector{String}()
+        seqnames = Vector{String}()
         # generate a mixture model for each region
-        for seq in keys(regions.trees)
+        for seqname in keys(regions.trees)
             # generate a mixture model for each region
-            push!(seqs, seq) # add sequence to sequence vector
+            push!(seqnames, seqname) # add sequence to sequence vector
             d = Vector{Distributions.DiscreteUniform}(undef, 0)
             l = Vector{Int}(undef,0)
-            for interval in regions.trees[seq]
+            for interval in regions.trees[seqname]
                 push!(d, Distributions.DiscreteUniform(interval.first, interval.last))
                 push!(l, interval.last-interval.first)
             end
-            lengths[seq] = sum(l)
-            distribution[seq] = Distributions.MixtureModel(d, Distributions.Categorical(l/sum(l)))
-            len_distribution[seq] = Distributions.Binomial(Statistics.median(l))
+            lengths[seqname] = sum(l)
+            distribution[seqname] = Distributions.MixtureModel(d, Distributions.Categorical(l/sum(l)))
+            len_distribution[seqname] = Distributions.Binomial(round(Int, Statistics.median(l)))
             # generate a mixture model for each region
         end
         # generate a categorical distribution for the chromosomes
         chr_distribution = Distributions.Categorical(collect(values(lengths))/sum(values(lengths)))
-        new(genome, regions, distribution, overlaps, seqs, len_distribution, chr_distribution, by_chromosome, on_fail)
+        new(genome, regions, distribution, overlaps, seqnames, len_distribution, chr_distribution, by_chromosome, on_fail)
     end
 end 
 
@@ -139,7 +139,7 @@ function randomise(interval::GenomicFeatures.Interval, distribution::StartMixtur
     for i in 1:max_tries
         # if by chromosome we don't need to draw a new chromosome
         if distribution.by_chromosome 
-            chr = interval.seq 
+            chr = interval.seqname 
         else
             chr = distribution._seqs[rand(distribution._chr_distribution)]
             # use the same length as the interval
@@ -147,13 +147,13 @@ function randomise(interval::GenomicFeatures.Interval, distribution::StartMixtur
         len = interval.last - interval.first
         # draw a start position
         start = rand(distribution._distribution[chr])
-        interval = GenomicFeatures.Interval(chr, start, start+len, interval.strand, interval.metadata)
+        new_interval = GenomicFeatures.Interval(chr, start, start+len, interval.strand, interval.metadata)
         # check if we belong to the regions, else we need to draw again
-        isin(interval, distribution.regions) || continue
+        isin(new_interval, distribution.regions) || continue
         # if we allow overlaps we can return straight away
-        distribution.overlaps && return mew_interval 
+        distribution.overlaps && return new_interval 
         # else we need to make sure we are not are overlapping the collection before we return
-        anyoverlapping(interval, collection) || return mew_interval
+        anyoverlapping(new_interval, collection) || return new_interval
     end
     throw(ErrorException("failed to radomise $interval after $max_tries tries"))
 end
