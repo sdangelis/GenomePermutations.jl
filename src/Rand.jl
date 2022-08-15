@@ -55,8 +55,9 @@ end
 function randomise(collection::GenomicFeatures.IntervalCollection{T}, distribution::AbstractGenomeDist) where {T}
     new_collection = GenomicFeatures.IntervalCollection{T}()
     for interval in collection
-        push!(new_collection, randomise(interval, distribution; collection))
+        push!(new_collection, randomise(interval, distribution; collection = new_collection))
     end
+    return new_collection
 end 
 
 
@@ -77,9 +78,10 @@ mutable struct StartMixture <: AbstractGenomeDist
     _chr_distribution::Distributions.Categorical
     by_chromosome::Bool
     on_fail::Symbol
+    max_tries::Int
 
     # inner constructor - required to force distribution to be generated from regions
-    function StartMixture(genome, regions, overlaps = false; by_chromosome = false, on_fail = :orig)
+    function StartMixture(genome, regions, overlaps = false; by_chromosome = false, on_fail = :orig, max_tries = 100)
         
         # Check on_fail is valid 
         if !(on_fail in [:throw, :continue, :orig])
@@ -110,13 +112,16 @@ mutable struct StartMixture <: AbstractGenomeDist
         end
         # generate a categorical distribution for the chromosomes
         chr_distribution = Distributions.Categorical(collect(values(lengths))/sum(values(lengths)))
-        new(genome, regions, distribution, overlaps, seqnames, len_distribution, chr_distribution, by_chromosome, on_fail)
+        new(genome, regions, distribution, overlaps, seqnames, len_distribution, chr_distribution, by_chromosome, on_fail, max_tries)
     end
 end 
 
 
-function Base.rand(distribution::AbstractGenomeDist; collection = GenomicFeatures.IntervalCollection{Nothing}(),  max_tries::Int = 100)
-    for i in 1:max_tries
+function Base.rand(distribution::AbstractGenomeDist;
+     collection = GenomicFeatures.IntervalCollection{Nothing}()
+    )
+    
+    for i in 1:distribution.max_tries
         # draw a chromosome
         chr = distribution._seqs[rand(distribution._chr_distribution)]
         # draw a length
@@ -131,12 +136,15 @@ function Base.rand(distribution::AbstractGenomeDist; collection = GenomicFeature
         # else we need to make sure we are not are overlapping the collection before we return
         anyoverlapping(interval, collection) || return interval
     end
-    throw(ErrorException("failed to draw a valid interval after $max_tries tries"))
+    throw(ErrorException("failed to draw a valid interval after $(distribution.max_tries) tries"))
 end
 
 
-function randomise(interval::GenomicFeatures.Interval, distribution::StartMixture; collection = GenomicFeatures.IntervalCollection{Nothing}(),  max_tries::Int = 100) 
-    for i in 1:max_tries
+function randomise(interval::GenomicFeatures.Interval, distribution::StartMixture;
+        collection = GenomicFeatures.IntervalCollection{Nothing}()
+    ) 
+
+    for i in 1:distribution.max_tries
         # if by chromosome we don't need to draw a new chromosome
         if distribution.by_chromosome 
             chr = interval.seqname 
@@ -155,7 +163,7 @@ function randomise(interval::GenomicFeatures.Interval, distribution::StartMixtur
         # else we need to make sure we are not are overlapping the collection before we return
         anyoverlapping(new_interval, collection) || return new_interval
     end
-    throw(ErrorException("failed to radomise $interval after $max_tries tries"))
+    throw(ErrorException("failed to radomise $interval after $(distribution.max_tries) tries"))
 end
 
 

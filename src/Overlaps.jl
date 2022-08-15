@@ -101,8 +101,10 @@ function countoverlapping(
 ) where {T,S}
 
 	overlaps::Int = 0
-	for interval in a
-		anyoverlapping(interval, b) && (overlaps += 1) 
+	for interval_a in a
+		for interval_b in b
+			GenomicFeatures.isoverlapping(interval_a, interval_b) && (overlaps += 1)
+		end 
 	end
 	return(overlaps)
 end
