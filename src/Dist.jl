@@ -4,6 +4,21 @@ dist(a, b)
 
 Return the minimum unsigend distance between Intervals a and b.
 returns missing if the two intervals do not have the same seqname. 
+
+```jldoctest
+
+using GenomicFeatures 
+a = GenomicFeatures.Interval("chr1", 10, 20)
+b = GenomicFeatures.Interval("chr1", 30, 65)
+    
+[dist(a, b), dist(b, a)]
+
+# output
+
+2-element Vector{Int64}:
+ 10
+ 10
+```
 """
 function dist(a::GenomicFeatures.Interval{S},b::GenomicFeatures.Interval{T}) where {S, T}
 
@@ -16,7 +31,7 @@ end
 dist(a,b, f = minimum)
 
 Linearly calculate all the distances between an interval a and a collection b,
-return a value according to function f.
+returning a value summarised according to function f.
 
 # Arguments
 
@@ -25,6 +40,29 @@ return a value according to function f.
 - `f::Function`: f Summarise all the pairwise distance for a and each interval in b 
 according to the supplied function f 
 Currently tested with `minimum`, `maximum`, `mean`, and `median`.
+
+
+```jldoctest
+using GenomicFeatures
+using Statistics
+
+a = GenomicFeatures.Interval("chr1", 25, 35)
+
+b = GenomicFeatures.IntervalCollection([
+	GenomicFeatures.Interval("chr1", 5, 10),
+	GenomicFeatures.Interval("chr1", 25, 35 ),
+	GenomicFeatures.Interval("chr1", 40, 100)
+	])
+
+[dist(a,b, minimum), dist(a,b, maximum), dist(a,b, mean), dist(a,b, median)]
+# output
+
+4-element Vector{Float64}:
+  0.0
+ 15.0
+  6.666666666666667
+  5.0
+```
 """
 function dist(
     a::GenomicFeatures.Interval{T}, 
@@ -47,7 +85,7 @@ end
 
 
 """
-dist(a, b, f, g)
+    dist(a, b, f, g)
 
 Lineraly caluclates the distance between collection a and b.
 Each distance between a and b is summarised according to f and then summarised 
@@ -59,7 +97,7 @@ according to g.
 - `b::GenomicFeatures.IntervalCollection{S}`: collectionb b.
 - `f::Function = x -> x`: f summarisees the result of the distances 
 between each interval of a and all intervals in b.
-tested with `minimum`. 'maximum`, `mean`, `median`
+tested with `x -> x`, `minimum`, 'maximum`, `mean`, `median`
 - `g::Function = minimum`: g summarises the distances returned by f for all
 items in a. Currently tested with `minimum`. `maximum`, `mean`, and `median`.
 
@@ -71,7 +109,33 @@ g must take a Vector{Union{Int, Float64}} but can return any type.
 Due to the fact that the result of f is stored in d before being summarised, it 
 is not possible to change f's return type  -
 even if we use a function in g that could acept a vector of that type. Indeed
-this is the reason for the need to Union{Int}
+this is the reason for the need to Union{Int, Float64} as the return type of f.
+but types & their optimisation in Julia can be funny. 
+
+```jldoctest
+using GenomicFeatures
+using Statistics
+
+a = GenomicFeatures.IntervalCollection([
+	GenomicFeatures.Interval("chr1", 15, 20),
+	GenomicFeatures.Interval("chr1", 150, 200)
+	])
+b = GenomicFeatures.IntervalCollection([
+	GenomicFeatures.Interval("chr1", 5, 10),
+	GenomicFeatures.Interval("chr1", 25, 35 ),
+	GenomicFeatures.Interval("chr1", 40, 100)
+	])
+
+[dist(a,b, x->x, minimum), dist(a,b, x->x, maximum), dist(a, x->x, mean), dist(a,b, x->x,median)]
+
+# output
+
+4-element Vector{Float64}:
+  5.0
+ 50.0
+ 27.5
+ 27.5
+```
 """
 function dist(
     a::GenomicFeatures.IntervalCollection{T}, 
