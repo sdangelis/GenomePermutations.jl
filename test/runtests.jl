@@ -258,8 +258,8 @@ regions13 = IntervalCollection([
                 no_overlaps = GenomePermutations.randomise(s1, fsc1)
                 @test isin(overlaps, regions2)
                 @test isin(no_overlaps, regions2) # we're in the target regions
-                @test GenomePermutations.countoverlapping(overlaps, overlaps) > length(overlaps)  # if we allow overlaps more will overlap 
-                @test GenomePermutations.countoverlapping(no_overlaps, no_overlaps) == length(no_overlaps) # if we disallow overlaps we only overlap with ourselves
+                @test GenomePermutations.countoverlaps(overlaps, overlaps) > length(overlaps)  # if we allow overlaps more will overlap 
+                @test GenomePermutations.countoverlaps(no_overlaps, no_overlaps) == length(no_overlaps) # if we disallow overlaps we only overlap with ourselves
                 # test by chromosome returns always something on the right chromosome 
                 @test collect(keys(GenomePermutations.randomise(collection18, t13_by_chr).trees)) == ["chr2"]
                 # sequence mismatch -> does only work wihtout by_chromosome
@@ -274,8 +274,20 @@ regions13 = IntervalCollection([
                 @test_nowarn GenomePermutations.randomise(c6c6, t6)
                 #@test isin(GenomePermutations.randomise(GenomicFeatures.IntervalCollection([interval5]), t6))
                 # can only get to 1 place if we disallow overlaps
-                @test GenomePermutations.randomise(collection8, f8) == collection8
-                @test GenomePermutations.randomise(collection8, t8) != collection8
+                r1 = GenomicFeatures.IntervalCollection([
+                    GenomicFeatures.Interval("chr1", 1, 80),
+                    GenomicFeatures.Interval("chr1", 100, 180),
+                    GenomicFeatures.Interval("chr1", 200, 280),
+                    GenomicFeatures.Interval("chr1", 320, 400), 
+                    GenomicFeatures.Interval("chr1", 400, 480),
+                    GenomicFeatures.Interval("chr1", 500, 679)
+                ])
+                tr1 = GenomePermutations.StartMixture("hgTest", r1, true; max_tries = 100)
+                fr1 = GenomePermutations.StartMixture("hgTest", r1, false; max_tries = 100)
+                overlaps = GenomePermutations.randomise(s1, tr1)
+                no_overlaps = GenomePermutations.randomise(s1, fr1)
+                @test GenomePermutations.countoverlapping(no_overlaps, no_overlaps) == 6 
+                @test GenomePermutations.countoverlapping(overlaps, overlaps) >= 6 
                 # are chromosome by chromosome the same when they must be?
                 @test GenomePermutations.randomise(collection8, f8) == collection8 == GenomePermutations.randomise(collection8, f8_by_chr)
                 end
@@ -311,7 +323,9 @@ regions13 = IntervalCollection([
 
         # test overlap counts
         @test countoverlapping(collection1, collection1) == collection1.length
-        @test countoverlapping(collection20, collection20) > length(collection20)
+        @test countoverlaps(collection1, collection1) == length(collection1)
+        @test countoverlaps(collection20, collection20) > length(collection20)
+        @test countoverlaps(collection20, collection20) > countoverlapping(collection20, collection20)
         @test countoverlapping(collection2, collection1) == 2
         @test countoverlapping(collection6, collection1) == countoverlapping(collection1, collection6) == 0 
         @test countoverlapping(collection5, collection6) == 1

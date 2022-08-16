@@ -10,7 +10,7 @@ include("Overlaps.jl")
 include("Dist.jl")
 include("Rand.jl")
 
-export anyoverlapping, alloverlapping, isin, anyin, countoverlapping
+export anyoverlapping, alloverlapping, isin, anyin, countoverlapping, countoverlaps
 export dist 
 export generatedistribution
 export randomiseregions, randomisegenome

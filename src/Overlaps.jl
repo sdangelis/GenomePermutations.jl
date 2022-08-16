@@ -65,7 +65,7 @@ end
 """
 	countoverlapping(a::GenomicFeatures.IntervalCollection{T} , b::GenomicFeatures.IntervalCollection{T})
 
-Linearly count how many intervals in collection a overlap with collection b.
+Linearly count how many intervals in collection a overlap with any interval in collection b.
 
 ```jldoctest
 
@@ -93,9 +93,57 @@ b = GenomicFeatures.IntervalCollection([
 As seen above, countoverlapping(a,b) != countoverlapping(b,a) as one interval in a 
 can overlap with >1 intervals in b.
 
-See Also [`GenomePermutations.anyoverlapping`](@ref), [`GenomePermutations.alloverlapping`](@ref).
+See Also [`GenomePermutations.anyoverlapping`](@ref), [`GenomePermutations.alloverlapping`](@ref), 
+[`GenomePermutations.countoverlaps`](@ref).
 """
 function countoverlapping(
+	a::GenomicFeatures.IntervalCollection{T},
+	b::GenomicFeatures.IntervalCollection{S}
+) where {T,S}
+
+	overlaps::Int = 0
+	for interval in a
+		anyoverlapping(interval, b) && (overlaps += 1) 
+	end
+	return(overlaps)
+end
+
+
+"""
+	countoverlaps(a::GenomicFeatures.IntervalCollection{T},b::GenomicFeatures.IntervalCollection{S})
+
+linearly counts how many intervals in collection b overlaps with collection a  
+
+```jldoctest
+
+using GenomicFeatures 
+a = GenomicFeatures.IntervalCollection([
+	GenomicFeatures.Interval("chr1", 14, 17),
+	GenomicFeatures.Interval("chr1", 20, 50)
+	])
+b = GenomicFeatures.IntervalCollection([
+	GenomicFeatures.Interval("chr1", 5, 10),
+	GenomicFeatures.Interval("chr1", 25, 35 ),
+	GenomicFeatures.Interval("chr1", 40, 65)
+	])
+
+[countoverlapping(a, b), countoverlapping(b, a)]
+
+# output
+
+2-element Vector{Int64}:
+ 2
+ 2
+```
+
+#Note 
+As seen above, countoverlapping(a,b) == countoverlapping(b,a) as we count the total number 
+of overlaps for each interval
+
+See Also [`GenomePermutations.anyoverlapping`](@ref), [`GenomePermutations.alloverlapping`](@ref), 
+[`GenomePermutations.countoverlaps`](@ref)
+"""
+function countoverlaps(
 	a::GenomicFeatures.IntervalCollection{T},
 	b::GenomicFeatures.IntervalCollection{S}
 ) where {T,S}
