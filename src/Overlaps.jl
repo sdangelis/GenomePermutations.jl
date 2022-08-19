@@ -127,7 +127,7 @@ b = GenomicFeatures.IntervalCollection([
 	GenomicFeatures.Interval("chr1", 40, 65)
 	])
 
-[countoverlapping(a, b), countoverlapping(b, a)]
+[countoverlaps(a, b), countoverlaps(b, a)]
 
 # output
 

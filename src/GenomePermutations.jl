@@ -8,6 +8,7 @@ import HypothesisTests
 
 include("Overlaps.jl")
 include("Dist.jl")
+include("Stats.jl")
 include("Rand.jl")
 
 export anyoverlapping, alloverlapping, isin, anyin, countoverlapping, countoverlaps
@@ -71,7 +72,6 @@ Generating a distribution from an overlapping collection is undocumented
 """
 function generatedistribution(collection) 
 
-	#@deprecate	"This function is deprecated constructors instead"
 	d = Vector{Distributions.DiscreteUniform}(undef, 0)
 	l = Vector{Int}(undef,0)
 	for i in collection
@@ -303,91 +303,6 @@ end
 
 
 """
-	simpleP(obs, ran, iterations; alternative :Auto)
-
-Calculates the p value for the alternative hypothesis that the observed value
-is either more or less than what we expect from the Vecor of random values.
-
-If no altrantive is provided, will be automatically selected 
-on the basis of the data.
-
-See also: [regioneR](https://doi.org/doi:10.18129/B9.bioc.regioneR), [`SimplePTest`](@ref)
-Please see regioneR for full details
-"""
-function simpleP(obs, ran, iterations; alternative = :Auto)
-	
-	if alternative == :Less
-		p = (length(filter(x-> x <= obs, ran)) + 
-		1)/(length(ran) + 1)
-	elseif alternative == :More 
-		p = ((length(filter(x-> x >= obs, ran)) + 
-		1)/(length(ran) + 1))
-	else
-		# the median should be the same as mean for large numbers but is more robust for small numbers
-		obs <= Statistics.median(ran) && return(simpleP(obs, ran, iterations; alternative = :Less))
-		return(simpleP(obs, ran, iterations, alternative = :More))
-	end
-	return(SimplePTest(iterations, p, alternative))
-end 
-
-
-"""
-	SimplePTest(iterations::Int, p_val::, alternative::)
-
-A structure to save RegioneR - style simple P tests. Implements `pvalue`
-"""
-struct SimplePTest
-	
-	iterations::Int
-	p_val::Float64
-	alternative::Symbol
-	min_p_val::Float64
-	function SimplePTest(iterations, p_val, alternative)
-		new(iterations, p_val, alternative, (1/(iterations+1)))
-	end
-end
- 
-
-"""
-	PermTestResult{S <: Union{Real, Vector{<:Real}}, N <: Union{Real, Vector{<:Real}}, T <: Any}
-
-A structure to store results of any permutation test
-implements pvalue.
-"""
-struct PermTestResult{S <: Union{Real, Vector{<:Real}}, N <: Union{Real, Vector{<:Real}}, T <: Any}
-	
-	iterations::Int
-	obs::S 
-	ran::Vector{N}
-	test::T
-	tested_regions::Union{String, Nothing}
-	randomised_regions::Union{String, Nothing}
-	eval_function::Function
-	random_strategy::String
-end 
-
-
-"""
-	HypothesisTests.pvalue(test::GenomePermutations.PermTestResult)
-
-Extends HypothesisTests.pvalue to get the P value of a GenomePermutations.PermTestResult.
-"""
-function HypothesisTests.pvalue(test::GenomePermutations.PermTestResult)
-	return HypothesisTests.pvalue(test.test)
-end
-
-
-"""
-	HypothesisTests.pvalue(test::GenomePermutations.SimplePTest)
-
-Extends HypothesisTests.pvalue to get the P value of a GenomePermutations.SimplePTest.
-"""
-function HypothesisTests.pvalue(test::GenomePermutations.SimplePTest)
-	return(test.p_val)
-end
-
-
-"""
 	overlappermtest(col1, col2, regions, iterations; bed_names, allow_overlap = false,
 	max_tries = 1000, onfail = :throws)
 
@@ -604,6 +519,60 @@ function permtest(col1, col2, regions, iterations, f::Function = GenomePermutati
 	return PermTestResult(iterations, obs, ran, test, bed_names[1], bed_names[2], f,
 						  "guess and check") 
 
-end                  
+end       
+
+
+"""
+	permtest(col1, col2, regions, iterations, f; allow_overlap = false, max_tries::Int = 1000, onfail = :throw)
+
+Runs a flexible permuation test, using a custsom evaluation function `f`.
+
+# Arguments
+
+- `col1::GenomicFeatures.IntervalCollection{}`: the collection to randomise.
+- `col2::GenomicFeatures.IntervalCollection{}`: the constant collection to test.
+- `regions::GenomicFeatures.IntervalCollection{}`: the regions col1 is randomised in.
+- `iterations::Int`: the number of iterations to run.
+- `f::Function = GenomePermutations.dist`: the evaluation function. 
+Defaults to GenomePermutations.dist.
+- `bed_names::Union{String, Nothing}`: the names of the bed files to write to.
+- `allow_overlap::Bool = false`: whether to allow overlaps in the randomised regions.
+- `max_tries::Int = 1000`: the maximum number of tries to generate a randomised collection.
+- `onfail::Symbol = :throw`: what to do if a random interval fails to fit in the region.
+Will return the orignal interval if :orig, skips it if :skip, otherwise throws an error.
+"""
+function permtest(randomised_collection::GenomicFeatures.IntervalCollection,
+	tested_collection::GenomicFeatures.IntervalCollection,
+	distribution::AbstractGenomeDist, 
+	iterations::Int, 
+	evaluating_function::Function = GenomePermutations.dist;
+	bed_names = (nothing,nothing))
+
+	# count base overlaps 
+	obs = evaluating_function(randomised_collection, tested_collection)
+	
+	# add checks and warnings as needed
+
+	ran = Array{Any}(undef, iterations)
+	Threads.@threads for i in 1:iterations
+		rand = randomise(randomised_collection, distribution)
+		ran[i] = evaluating_function(rand, tested_collection)
+	end 
+
+
+	# get p value for overlap test, if we only have 1 observaton per iteration
+	if length(obs) == 1
+		test = simpleP(obs, ran, iterations)
+	else
+		ran = map(Statistics.mean, ran)
+		obs = Statistics.mean(reduce(vcat, obs))
+		#obs = map(Statistics.mean, map(Statistics.mean, obs))
+		test = simpleP(obs, ran, iterations)
+	end
+		
+	return PermTestResult(iterations, obs, ran, test, bed_names[1], bed_names[2], evaluating_function,
+						  string(typeof(distribution))) 
+
+end       
 
 end

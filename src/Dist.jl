@@ -1,4 +1,3 @@
-
 """
 dist(a, b)
 
@@ -149,7 +148,7 @@ function dist(
         tmp_d  =  dist(interval,b, f)
         # deal with ampty collections
         isempty(tmp_d) && continue 
-        push!(d,tmp_d)
+        push!(d, tmp_d)
     end
     return g(d)
 end
