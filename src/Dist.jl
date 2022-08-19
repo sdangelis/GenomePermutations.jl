@@ -1,7 +1,7 @@
 """
 dist(a, b)
 
-Return the minimum unsigend distance between Intervals a and b.
+Return the unsigend distance between Intervals a and b.
 returns missing if the two intervals do not have the same seqname. 
 
 ```jldoctest
@@ -14,7 +14,7 @@ b = GenomicFeatures.Interval("chr1", 30, 65)
 
 # output
 
-2-element Vector{Int64}:
+2-element Vector{Int}:
  10
  10
 ```
@@ -27,19 +27,15 @@ end
 
 
 """
-dist(a,b, f = minimum)
+dist(a,b)
 
-Linearly calculate all the distances between an interval a and a collection b,
+Linearly calculate the minimum distances between an interval a and a collection b,
 returning a value summarised according to function f.
 
 # Arguments
 
 - `a::GenomicFeatures.interval{T}`: interval to calculate distances from.
-- `b::GenomicFeatures.IntervalCollection{S}`: collection to calculate all distances to.
-- `f::Function`: f Summarise all the pairwise distance for a and each interval in b 
-according to the supplied function f 
-Currently tested with `minimum`, `maximum`, `mean`, and `median`.
-
+- `b::GenomicFeatures.IntervalCollection{S}`: collection to calculate distance to.
 
 ```jldoctest
 using GenomicFeatures
@@ -53,23 +49,16 @@ b = GenomicFeatures.IntervalCollection([
 	GenomicFeatures.Interval("chr1", 40, 100)
 	])
 
-[dist(a,b, minimum), dist(a,b, maximum), dist(a,b, mean), dist(a,b, median)]
-# output
+dist(a, b)
+  0
 
-4-element Vector{Float64}:
-  0.0
- 15.0
-  6.666666666666667
-  5.0
-```
 """
 function dist(
     a::GenomicFeatures.Interval{T}, 
-    b::GenomicFeatures.IntervalCollection{S},
-    f::Function = minimum
+    b::GenomicFeatures.IntervalCollection{S}
 ) where {T, S}
 
-    d = Vector{Union{Int, Float64}}(undef,0)
+    d = Vector{Int}(undef,0)
     for interval in b
         tmp_d = dist(a,interval)
         if ismissing(tmp_d)
@@ -79,37 +68,28 @@ function dist(
     end
     # Workaround to deal with empty collection
     isempty(d) && return(d)
-    return f(d)
+    return minimum(d)
 end
 
 
 """
-    dist(a, b, f, g)
+    dist(a, b; f = x->x)
 
-Lineraly caluclates the distance between collection a and b.
-Each distance between a and b is summarised according to f and then summarised 
-according to g.
+Lineraly caluclates the distance between each item in collection a and collection b,
+summarised according to f.
 
 # Agruments
 
 - `a::GenomicFeatures.IntervalCollection{T}`: collection a.
 - `b::GenomicFeatures.IntervalCollection{S}`: collectionb b.
-- `f::Function = x -> x`: f summarisees the result of the distances 
-between each interval of a and all intervals in b.
-tested with `x -> x`, `minimum`, 'maximum`, `mean`, `median`
-- `g::Function = minimum`: g summarises the distances returned by f for all
-items in a. Currently tested with `minimum`. `maximum`, `mean`, and `median`.
+- `f::Function = x->x`: g summarises the distances returned by f for all
+items in a
 
 # Note
 
-Both g and f can be replaced by user-defined functions. f must take a  
-Vector{Union{Int, Float64}} and return Union{Int, Float64}.
-g must take a Vector{Union{Int, Float64}} but can return any type.
-Due to the fact that the result of f is stored in d before being summarised, it 
-is not possible to change f's return type  -
-even if we use a function in g that could acept a vector of that type. Indeed
-this is the reason for the need to Union{Int, Float64} as the return type of f.
-but types & their optimisation in Julia can be funny. 
+Both g and can be replaced by user-defined functions.
+`f` must take a Vector{Int} but can return any type.
+
 
 ```jldoctest
 using GenomicFeatures
@@ -125,7 +105,7 @@ b = GenomicFeatures.IntervalCollection([
 	GenomicFeatures.Interval("chr1", 40, 100)
 	])
 
-[dist(a,b, x->x, minimum), dist(a,b, x->x, maximum), dist(a, x->x, mean), dist(a,b, x->x,median)]
+[dist(a,b, x->x), dist(a,b, maximum), dist(a,b, maximum), dist(a, b, median), dist(a,b, x->x, mean)]
 
 # output
 
