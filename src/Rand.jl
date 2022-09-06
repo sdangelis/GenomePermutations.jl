@@ -81,13 +81,16 @@ mutable struct StartMixture <: AbstractGenomeDist
     max_tries::Int
 
     # inner constructor - required to force distribution to be generated from regions
-    function StartMixture(genome, regions, overlaps = false; by_chromosome = false, on_fail = :orig, max_tries = 100)
+    function StartMixture(genome, regions, overlaps = false; by_chromosome = false, on_fail = :throw, max_tries = 100)
         
         # Check on_fail is valid 
         if !(on_fail in [:throw, :continue, :orig])
             error("on_fail must be one of :throw, :continue, :orig")
         end
 
+        if on_fail == :orig && overlaps == false
+            @warn "returning the original interval on fail may return overlapping segments"
+        end
 	    #generate start distrubutions
 
         # initialise objects to push into
@@ -150,8 +153,8 @@ function randomise(interval::GenomicFeatures.Interval, distribution::StartMixtur
             chr = interval.seqname 
         else
             chr = distribution._seqs[rand(distribution._chr_distribution)]
-            # use the same length as the interval
         end
+        # use the same length as the interval
         len = interval.last - interval.first
         # draw a start position
         start = rand(distribution._distribution[chr])
@@ -163,7 +166,11 @@ function randomise(interval::GenomicFeatures.Interval, distribution::StartMixtur
         # else we need to make sure we are not are overlapping the collection before we return
         anyoverlapping(new_interval, collection) || return new_interval
     end
-    throw(ErrorException("failed to radomise $interval after $(distribution.max_tries) tries"))
+    if distribution.on_fail == :orig
+        return(interval)
+    else
+        throw(ErrorException("failed to radomise $interval after $(distribution.max_tries) tries"))
+    end
 end
 
 

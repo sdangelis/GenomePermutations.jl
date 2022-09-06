@@ -442,7 +442,7 @@ Runs a flexible permuation test, using a custsom evaluation function `f`.
 - `col1::GenomicFeatures.IntervalCollection{}`: the collection to randomise.
 - `col2::GenomicFeatures.IntervalCollection{}`: the constant collection to test.
 - `regions::GenomicFeatures.IntervalCollection{}`: the regions col1 is randomised in.
-- `iterations::Int`: the number of iterations to run.
+- `iterations::Int`: the number of iterations torun.
 - `f::Function = GenomePermutations.dist`: the evaluation function. 
 Defaults to GenomePermutations.dist.
 - `bed_names::Union{String, Nothing}`: the names of the bed files to write to.
@@ -523,7 +523,7 @@ end
 
 
 """
-	permtest(col1, col2, regions, iterations, f; allow_overlap = false, max_tries::Int = 1000, onfail = :throw)
+	permtest(randomised_collection, tested_collection, distribution, iterations, f; bed_names)
 
 Runs a flexible permuation test, using a custsom evaluation function `f`.
 
@@ -531,15 +531,11 @@ Runs a flexible permuation test, using a custsom evaluation function `f`.
 
 - `col1::GenomicFeatures.IntervalCollection{}`: the collection to randomise.
 - `col2::GenomicFeatures.IntervalCollection{}`: the constant collection to test.
-- `regions::GenomicFeatures.IntervalCollection{}`: the regions col1 is randomised in.
+- `distribution::GenomicFeatures.AbstractGenomeDist`: the genbome dist to use for the randomisation
 - `iterations::Int`: the number of iterations to run.
 - `f::Function = GenomePermutations.dist`: the evaluation function. 
 Defaults to GenomePermutations.dist.
-- `bed_names::Union{String, Nothing}`: the names of the bed files to write to.
-- `allow_overlap::Bool = false`: whether to allow overlaps in the randomised regions.
-- `max_tries::Int = 1000`: the maximum number of tries to generate a randomised collection.
-- `onfail::Symbol = :throw`: what to do if a random interval fails to fit in the region.
-Will return the orignal interval if :orig, skips it if :skip, otherwise throws an error.
+- `bed_names::Tuple{Union{String, Nothing}}`: the names of the bed files to write to.
 """
 function permtest(randomised_collection::GenomicFeatures.IntervalCollection,
 	tested_collection::GenomicFeatures.IntervalCollection,

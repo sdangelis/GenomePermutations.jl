@@ -1,7 +1,7 @@
 name = "GenomePermutations"
 uuid = "332f1fbc-14a8-4e72-b09d-ec057a6da7c2"
 authors = ["Simone De Angelis <simone.deangelis@qmul.ac.uk> <side97.11+jl@gmail.com>"]
-version = "0.1.0"
+version = "0.0.9"
 
 [deps]
 BED = "8e4a8c10-cb6b-11e8-08d2-83478d609d67"

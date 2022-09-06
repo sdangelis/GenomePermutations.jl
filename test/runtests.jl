@@ -253,7 +253,10 @@ regions13 = IntervalCollection([
                 @test_throws KeyError GenomePermutations.randomise(interval1, t17_by_chr)
                 @test isin(GenomePermutations.randomise(interval1, t7), collection7)
                 # no way to randomise this interval without overlapping collection 6 
-                @test_throws ErrorException GenomePermutations.randomise(interval5, f6; collection = collection6)
+                @test_throws ErrorException GenomePermutations.randomise(interval5, f6; collection = collection6)        
+                f6orig = deepcopy(f6)
+                f6orig.on_fail = :orig
+                @test GenomePermutations.randomise(interval5, f6orig; collection = collection6) == interval5
                 @test isin(GenomePermutations.randomise(interval5, t6; collection = collection6), collection6)
                 # this one can only be in 1 place 
                 @test GenomePermutations.randomise(interval5, f8; collection = collection6) == interval6
@@ -367,8 +370,86 @@ regions13 = IntervalCollection([
         @test GenomePermutations.simpleP(80, [80, 80, 80, 80, 80], 5; alternative = "Auto") == GenomePermutations.SimplePTest(5, 1, :Less)
         @test GenomePermutations.simpleP(80, [400, 400, 400, 400, 400, 400, 400, 400, 400, 400], 10; alternative = "Auto") == GenomePermutations.SimplePTest(10, 0.09090909090909091, :Less)
         @test GenomePermutations.simpleP(80, [78, 78, 78, 99, 78], 5; alternative = "Auto") == GenomePermutations.simpleP(80, [2, 2, 2, 99, 2], 5; alternative = "Auto") ==GenomePermutations.SimplePTest(5, 0.3333333333333333,:More)
-    end 
-    
+    end     
+
+    @testset "[NEW!] Generic permutation test" begin 
+        # define some supplementary regions as needed 
+        scollection1 =  GenomicFeatures.IntervalCollection([
+            GenomicFeatures.Interval("chr1", 2, 101), 
+            GenomicFeatures.Interval("chr1", 201, 301), 
+            GenomicFeatures.Interval("chr1", 402, 503)])
+        scollection2 =  GenomicFeatures.IntervalCollection([
+            GenomicFeatures.Interval("chr1", 2, 101), 
+            GenomicFeatures.Interval("chr1", 201, 301), 
+            GenomicFeatures.Interval("chr1", 402, 503),
+            GenomicFeatures.Interval("chr2", 2, 101), 
+            GenomicFeatures.Interval("chr2", 201, 301), 
+            GenomicFeatures.Interval("chr2", 402, 503)
+            ])
+        scollection3 =  GenomicFeatures.IntervalCollection([
+            GenomicFeatures.Interval("chr1",  499400, 499500), 
+            GenomicFeatures.Interval("chr1",  499700, 499800), 
+            GenomicFeatures.Interval("chr1", 499900, 500000)])
+        scollection4 =  GenomicFeatures.IntervalCollection([
+            GenomicFeatures.Interval("chr1",  499400, 499500), 
+            GenomicFeatures.Interval("chr1",  499700, 499800), 
+            GenomicFeatures.Interval("chr1", 499900, 500000),
+            GenomicFeatures.Interval("chr2",  499400, 499500), 
+            GenomicFeatures.Interval("chr2",  499700, 499800), 
+            GenomicFeatures.Interval("chr2", 499900, 500000)])
+        scollection5 = GenomicFeatures.IntervalCollection([
+                GenomicFeatures.Interval("chr1", 1, 100),
+                GenomicFeatures.Interval("chr1", 200, 300),
+                GenomicFeatures.Interval("chr1", 400, 500),
+                GenomicFeatures.Interval("chr2", 1, 100),
+                GenomicFeatures.Interval("chr2", 200, 300),
+                GenomicFeatures.Interval("chr2", 400, 500)
+                ]) 
+
+        @testset "default distance" begin
+            
+            f6 = GenomePermutations.StartMixture("hgTest", regions6, false)
+            f7 = GenomePermutations.StartMixture("hgTest", regions7, false;  by_chromosome = true)
+            f8 = GenomePermutations.StartMixture("hgTest", regions8, false;  by_chromosome = true)
+            f11 = GenomePermutations.StartMixture("hgTest", regions11, false;  by_chromosome = true)            
+            f12 = GenomePermutations.StartMixture("hgTest", regions12, false;  by_chromosome = true)
+
+            @testset "Single sequence" begin 
+                # 1 distance to iteslf should be as significant as it gets
+                test =  permtest(collection1, collection1, f6, 100) 
+                @test pvalue(test.test) < 0.01
+                # 2 closer than expected
+                test = permtest(collection1, scollection1, f6, 100) 
+                @test pvalue(test.test) < 0.01
+                # 3 more distant than expected
+                test = permtest(collection1, scollection3, f6, 100)
+                @test pvalue(test.test) < 0.01
+                # 4 sequenecs to randomise do not belong to regions 
+                @test_throws Exception permtest(collection1,  collection2, f8, 100)
+                # 5 Regions to randomise have an extra sequence
+                @test_nowarn permtest(collection1,  collection2, f11, 100)  
+            end
+            @testset "Mutliple sequences" begin 
+                # 1 distance to iteslf should be as significant as it gets
+                test =  permtest(collection10, collection10, f7, 100) 
+                @test pvalue(test.test) < 0.01
+                # 2 closer than expected
+                test = permtest(collection10, scollection2, f7, 100) 
+                @test pvalue(test.test) < 0.01
+            # 3 more distant than expected
+                test = permtest(scollection5, scollection4, f7, 100)
+                @test pvalue(test.test) < 0.01
+                # Need a test for the case where we expect a p of 1. 
+                # 4 All sequences wrong
+                @test_throws Exception permtest(collection14,  collection15, f8, 100)
+                # 5 One of 2 sequences are wrong
+                @test_throws Exception permtest(collection14,  collection15, f11, 100)
+                # 6 there is an extra chromosome - This should work fine
+                @test_nowarn permtest(collection14,  collection15, f12, 100)
+            end
+        end
+    end
+
     @testset "legacy functions" begin
 
         # test distribution generation
@@ -377,8 +458,6 @@ regions13 = IntervalCollection([
                 MixtureModel([DiscreteUniform(1,100), DiscreteUniform(200, 300), DiscreteUniform(400, 500)], Distributions.Categorical([99/299, 100/299, 100/299]))
             @test typeof(generatedistribution(collection1)) <: Distributions.Distribution
         end 
-
-
 
         dist2 = generatedistribution(collection2)
         dist3 = generatedistribution(collection3)
