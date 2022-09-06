@@ -125,7 +125,7 @@ b = GenomicFeatures.IntervalCollection([
 	GenomicFeatures.Interval("chr1", 40, 100)
 	])
 
-[dist(a,b, x->x, minimum), dist(a,b, x->x, maximum), dist(a, b, x->x, mean), dist(a,b, x->x,median)]
+[dist(a,b, minimum, x->x), dist(a,b, maximum, x->x), dist(a, b, mean, x->x), dist(a,b, median, x->x)]
 
 # output
 
