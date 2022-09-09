@@ -12,7 +12,7 @@ include("Stats.jl")
 include("Rand.jl")
 
 export anyoverlapping, alloverlapping, isin, anyin, countoverlapping, countoverlaps
-export dist 
+export dist, featuredist
 export generatedistribution
 export randomiseregions, randomisegenome
 export simpleP, SimplePTest, pvalue
@@ -20,7 +20,7 @@ export permtest, overlappermtest, PermTestResult
 
 
 """
-	vec_getcollection(collection::GenomicFeatures.IntervalCollection{T}, sequence::String) 
+	vec_getcollection(collection::GenomicFeastures.IntervalCollection{T}, sequence::String) 
 
 (inefficiently) retun a interval collection with only features in the specified sequence.
 There should be a better way to do this.

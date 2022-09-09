@@ -14,6 +14,7 @@ interval3 = GenomicFeatures.Interval("chr1", 99,280) # test7
 interval4 = GenomicFeatures.Interval("chr3", 99,280) # test7
 interval5 = GenomicFeatures.Interval("chr2", 2150, 2180)
 interval6 = GenomicFeatures.Interval("chr2", 2350, 2380)
+interval8 = GenomicFeatures.Interval("chr2", 1350, 2400)
 collection1 = GenomicFeatures.IntervalCollection([
     GenomicFeatures.Interval("chr1", 1, 100),
     GenomicFeatures.Interval("chr1", 200, 300),
@@ -174,6 +175,12 @@ regions13 = IntervalCollection([
     GenomicFeatures.Interval("chr3", 1, 500000),
     GenomicFeatures.Interval("chrM", 1, 500000)
     ])
+regions14 = IntervalCollection([
+    GenomicFeatures.Interval("chr1", 1, 180),
+    GenomicFeatures.Interval("chr1", 400, 550),
+    GenomicFeatures.Interval("chr1", 700, 1000)
+    ])
+
 
 @testset "GenomicPermutations.jl" begin
     
@@ -204,20 +211,44 @@ regions13 = IntervalCollection([
     end
 
     @testset "distance functions" begin
-        # for single intervals
-        @test ismissing(dist(interval3, interval4)) && dist(interval1, interval2) == 870 && dist(interval2, interval3) == 0
-        
-        # for an interval and a collection 
-        @test [20,150,96.66666666666667,120] == map( x->dist(interval2 ,collection1, x), [minimum, maximum, mean, median])
-        @test [970, 1070, 1020.0, 1020.0 ] == map( x->dist(interval1 ,collection5, x), [minimum, maximum, mean, median])
-        #@test_logs (:warn, r"could not calculcate distance") match_mode=:any map( x->dist(interval1 ,collection5, x), [minimum, maximum, mean, median])
-        
-        # for 2 collections
-        @test dist(collection5, collection5) == [0, 0, 0]
-        @test  [[0, 170], 0, 170, 85.0, 85.0] == map( x->dist(collection2 ,collection3, x), [x -> x, minimum, maximum, mean, median])
-        @test  [[2050, 1850, 1650], 1650, 2050, 1850.0, 1850.0] == map( x->dist(collection1 ,collection5, x), [x -> x, minimum, maximum, mean, median])
-        #@test_logs (:warn, r"could not calculcate distance") match_mode=:any map( x->dist(collection1 ,collection5, x), [x -> x, minimum, maximum, mean, median])
-        @test [[1650, 1750], 1650, 1750, 1700.0, 1700.0] ==  map( x->dist(collection5 ,collection1, x), [x -> x, minimum, maximum, mean, median]) # why does this fail
+        @testset "simple distance" begin 
+            @testset "single interval"  begin
+                @test ismissing(dist(interval3, interval4)) && dist(interval1, interval2) == 870 && dist(interval2, interval3) == 0
+            end 
+            @testset "single interval and collection" begin 
+                @test 20 == dist(interval2 ,collection1)
+                @test 970 == dist(interval1 ,collection5)
+            end
+            @testset "for 2 collections" begin
+                @test dist(collection5, collection5) == [0, 0, 0]
+                @test  [0, 170] == dist(collection2 ,collection3)
+                @test  [2050, 1850, 1650] == dist(collection1 ,collection5)
+                @test [1650, 1750] ==  dist(collection5 ,collection1) 
+
+            end
+        end
+
+        @testset "feature distance" begin
+            # if no overlaps featuredist == dist, else = 0
+            @testset "single interval" begin 
+                @test ismissing(featuredist(interval3, interval4)) && featuredist(interval1, interval2) == 870 && featuredist(interval2, interval3) == 0
+                @test featuredist(interval6, interval8) == 0 != dist(interval6, interval8)
+            end
+            @testset "single interval and a feature collection" begin 
+                @test 970 == dist(interval1 ,collection5) == featuredist(interval1 ,collection5)
+                @test 0 == featuredist(interval2 ,collection1) != dist(interval2 ,collection1)
+            end 
+            @testset "interval and feature collection" begin 
+                @test featuredist(collection5, collection5) == [0, 0, 0]
+                @test featuredist(collection2, collection1) == [0,0] != dist(collection2, collection1)
+                # test a partially impossible case
+                @test featuredist(collection12, collection9) == [0, 0, 0] != dist(collection12, collection9)
+                @test featuredist(collection12, regions14) == [0, 0, 0] != dist(collection16, regions14)
+                @test featuredist(regions4, regions2) == [0, 0, 0, 0] != dist(regions4, regions2)
+            end 
+            # case where we have mno verla 
+            #case where we have overlaps
+        end
     end     
 
     @testset "test AbstractGenomeRand" begin
